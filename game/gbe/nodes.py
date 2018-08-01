@@ -12,6 +12,10 @@ class Node:
         self.name = name
 
     @property
+    def type(self):
+        return NODETYPE_NODE
+
+    @property
     def parent(self):
         return self._parent
 
@@ -23,12 +27,28 @@ class Node:
             raise e
 
     @property
+    def root(self):
+        if self._parent is None:
+            return self
+        return self._parent.root
+
+    @property
     def name(self):
         return self._name
 
     @name.setter
     def name(self, value):
         self._name = value
+
+    @property
+    def full_name(self):
+        if self._parent is None:
+            return self._name
+        return self._parent.full_name + "." + self._name
+
+    @property
+    def child_count(self):
+        return len(this._children)
 
     def parent_to_node(self, parent, allow_reparenting=False):
         if not isinstance(value, Node):
@@ -58,15 +78,41 @@ class Node:
             self._children.insert(index, node)
 
     def remove_node(self, node):
-        if node.parent != self:
-            if node.parent == None:
-                raise NodeError("Cannot remove an unparented node.")
-            return node.parent.remove_node(node)
-        if node in self._children:
-            self._children.remove(node)
-            node._parent = None
-            return node
+        if isinstance(node, (str, unicode)):
+            n = self.get_node(node)
+            if n is not None:
+                try:
+                    return self.remove_node(n)
+                except NodeError as e:
+                    raise e
+        elif isinstance(node, Node):
+            if node.parent != self:
+                if node.parent == None:
+                    raise NodeError("Cannot remove an unparented node.")
+                try:
+                    return node.parent.remove_node(node)
+                except NodeError as e:
+                    raise e
+            if node in self._children:
+                self._children.remove(node)
+                node._parent = None
+                return node
+        else:
+            raise NodeError("Expected a Node instance or a string.")
+        return None
 
+
+    def get_node(self, name):
+        if len(self._children) <= 0:
+            return None
+
+        subnames = name.split(".")
+        for c in self._children:
+            if c.name == subnames[0]:
+                if len(subnames) > 1:
+                    return c.get_node(".".join(subnames[1:-1]))
+                return c
+        return None
 
 
 
