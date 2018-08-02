@@ -67,7 +67,7 @@ class Node:
         if node.parent is not None:
             if node.parent == self:
                 return # Nothing to do. Given node already parented to this node.
-            if reparent = False:
+            if reparent == False:
                 raise NodeError("Node already parented.")
             if node.parent.remove_node(node) != node:
                 raise NodeError("Failed to remove given node from it's current parent.")
