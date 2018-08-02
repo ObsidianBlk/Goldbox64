@@ -1,4 +1,4 @@
-
+import time
 import weakref
 import pygame
 
@@ -57,12 +57,95 @@ class _Events:
 Events = _Events()
 
 
+_ClickDelayMax=500 # in Milliseconds
+_DOWNKEYS=[]
+_DOWNMBUTTONS=[]
+_DOWNJBUTTONS=[]
 
+def _WatchKey(key):
+    global _DOWNKEYS
+    for k in _DOWNKEYS:
+        if k[0] == key:
+            return # Already watching. Technically, this should never happen.
+    _DOWNKEYS.append((key, int(round(time.time()*1000))))
+def _ReleaseKey(key):
+    global _DOWNKEYS, _ClickDelayMax
+    tick = int(round(time.time()*1000))
+    for k in _DOWNKEYS:
+        if k[0] == key:
+            lastTick = k[1]
+            _DOWNKEYS.remove(k)
+            if tick - lastTick <= _ClickDelayMax:
+                Events.emit("KEYPRESSED", {key:key, mod:pygame.key.get_mods()})
+            return # Done.
+    # We found nothing, boss.
+
+
+def _WatchButton(device, button):
+    global _DOWNMBUTTONS, _DOWNJBUTTONS
+    tick = int(round(time.time()*1000))
+    btnsrc = _DOWNMBUTTONS
+    if device >= 0:
+        btnsrc = _DOWNJBUTTONS
+    for b in btnsrc:
+        if b[0] == device and b[1] == button:
+            return # Already Watching...
+    btnsrc.append((device, button, tick))
+def _ReleaseButton(device, button):
+    global _DOWNMBUTTONS, _DOWNJBUTTONS, _ClickDelayMax
+    tick = int(round(time.time()*1000))
+    btnsrc = _DOWNMBUTTONS
+    if device >= 0:
+        btnsrc = _DOWNJBUTTONS
+    for b in btnsrc:
+        if b[0] == device and b[1] == button:
+            lastTick = b[2]
+            btnsrc.remove(b)
+            if tick - lastTick <= _ClickDelayMax:
+                if device >= 0:
+                    Events.emit("JOYBUTTONPRESSED", {joy:device, button:button})
+                else:
+                    Events.emit("MOUSEBUTTONPRESSED", {pos:pygame.mouse.get_pos(), button:button})
+            return # Done.
+    # We found nothing, boss.
 
 def pollEmitter():
+    global Events, _WatchKey, _ReleaseKey, _WatchButton, _ReleaseButton
     for event in pygame.event.get():
-        #TODO: For each event obtains, convert it for the above Event dispatcher
-        pass
+        if event.type == pygame.QUIT:
+            Events.emit("QUIT", {})
+        elif event.type == pygame.KEYDOWN:
+            _WatchKey(event.key)
+            Events.emit("KEYDOWN", {unicode:event.unicode, key:event.key, mod:event.mod})
+        elif event.type == pygame.KEYUP:
+            Events.emit("KEYUP", {key:event.key, mod:event.mod})
+            _ReleaseKey(event.key)
+        elif event.type == pygame.MOUSEMOTION:
+            Events.emit("MOUSEMOTION", {pos:event.pos, rel:event.rel, buttons:event.buttons})
+        elif event.type == pygame.MOUSEBUTTONUP:
+            Events.emit("MOUSEBUTTONUP", {pos:event.pos, button:event.button})
+            _ReleaseButton(-1, event.button)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            _WatchButton(-1, event.button)
+            Events.emit("MOUSEBUTTONDOWN", {pos:event.pos, button:event.button})
+        elif event.type == pygame.VIDEORESIZE:
+            Events.emit("VIDEORESIZE", {size:event.size, w:event.w, h:event.h})
+        elif event.type == pygame.VIDEOEXPOSE:
+            Events.emit("VIDEOEXPOSE", {})
+        elif event.type == pygame.JOYAXISMOTION:
+            Events.emit("JOYAXISMOTION", {joy:event.joy, axis:event.axis, value:event.value})
+        elif event.type == pygame.JOYBALLMOTION:
+            Events.emit("JOYBALLMOTION", {joy:event.joy, ball:event.ball, res:event.rel})
+        elif event.type == pygame.JOYHATMOTION:
+            Events.emit("JOYHATMOTION", {joy:event.joy, hat:event.hat, value:event.value})
+        elif event.type == pygame.JOYBUTTONUP:
+            Events.emit("JOYBUTTONUP", {joy:event.joy, button:event.button})
+            _ReleaseButton(event.joy, event.button)
+        elif event.type == pygame.JOYBUTTONDOWN:
+            _WatchButton(event.joy, event.button)
+            Events.emit("JOYBUTTONDOWN", {joy:event.joy, button:event.button})
+        else:
+            Events.emit("PYGUSER_{}".format(event.code), {})
 
 
 
