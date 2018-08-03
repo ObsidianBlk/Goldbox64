@@ -1,3 +1,9 @@
+'''
+    Filename events.py
+    Author: Bryan "ObsidianBlk" Miller
+    Date Created: 8/1/2018
+    Python Version: 3.7
+'''
 import time
 import weakref
 import pygame
