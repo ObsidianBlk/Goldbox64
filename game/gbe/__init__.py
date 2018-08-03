@@ -1,4 +1,4 @@
-from .core import Time
-from .core import Display
+from . import time
+from . import display
 from . import events
 from . import nodes

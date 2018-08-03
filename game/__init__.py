@@ -1,4 +1,4 @@
-import game.gbe
+from . import gbe
 
 _RUNNING = False
 
@@ -18,15 +18,15 @@ def onKeyEvent(event, data):
 
 def start():
     global _RUNNING, onKeyEvent
-    t = game.gbe.Time()
+    t = gbe.time.Time()
     t.reset()
 
-    game.gbe.events.Events.listen("KEYDOWN", onKeyEvent)
-    game.gbe.events.Events.listen("KEYUP", onKeyEvent)
-    game.gbe.events.Events.listen("KEYPRESSED", onKeyEvent)
-    d = game.gbe.Display()
+    gbe.events.Events.listen("KEYDOWN", onKeyEvent)
+    gbe.events.Events.listen("KEYUP", onKeyEvent)
+    gbe.events.Events.listen("KEYPRESSED", onKeyEvent)
+    d = gbe.display.Display()
     d.init()
     _RUNNING = True
     while _RUNNING:
-        game.gbe.events.pollEmitter()
+        gbe.events.pollEmitter()
     d.close()
