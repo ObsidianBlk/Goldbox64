@@ -5,16 +5,28 @@
     Python Version: 3.7
 '''
 import pygame
+import weakref
 
-class Display:
-    def __init__(self, width=640, height=480):
+class Flag:
+    SWSURFACE = pygame.SWSURFACE
+    HWSURFACE = pygame.HWSURFACE
+    HWPALETTE = pygame.HWPALETTE
+    DOUBLEBUF = pygame.DOUBLEBUF
+    FULLSCREEN = pygame.FULLSCREEN
+    OPENGL = pygame.OPENGL
+    RESIZABLE = pygame.RESIZABLE
+    NOFRAME = pygame.NOFRAME
+
+    def isSet(flags, flag):
+        return (flags & flag) == flag
+
+class _Display:
+    def __init__(self, width=0, height=0):
+        # NOTE: In the newest version of pygame, setting resolution to 0,0 should set the resolution to that of the screen... so we'll just mimic that.
         self._init = False
         self._resolution = (width, height)
         self._display_surface = None
-        self._display_flags = Display.FLAG_RESIZABLE | Display.FLAG_HWSURFACE | Display.FLAG_DOUBLEBUF
-
-    def _isFlagSet(self, flag):
-        return (self._display_flags & flag) == flag
+        self._display_flags = Flag.RESIZABLE | Flag.HWSURFACE | Flag.DOUBLEBUF
 
     @property
     def surface(self):
@@ -39,30 +51,34 @@ class Display:
         return self._display_surface.get_size()
 
     @property
+    def flags(self):
+        return self._display_flags
+
+    @property
     def fullscreen(self):
-        return self._isFlagSet(Display.FLAG_FULLSCREEN)
+        return Flag.isSet(self._display_flags, Flag.FULLSCREEN)
 
     @property
     def double_buffered(self):
-        return self._isFlagSet(Display.FLAG_DOUBLEBUF)
+        return Flag.isSet(self._display_flags, Flag.DOUBLEBUF)
 
     @property
     def resizable(self):
-        return self._isFlagSet(Display.FLAG_RESIZABLE)
+        return Flag.isSet(self._display_flags, Flag.RESIZABLE)
 
     @property
     def no_frame(self):
-        return self._isFlagSet(Display.FLAG_NOFRAME)
+        return Flag.isSet(self._display_flags, Flag.NOFRAME)
 
     @property
     def opengl(self):
-        return self._isFlagSet(Display.FLAG_OPENGL)
+        return Flag.isSet(self._display_flags, Flag.OPENGL)
 
     def toggle_fullscreen(self):
-        if self._isFlagSet(Display.FLAG_FULLSCREEN):
-            self._display_flags ^= Display.FLAG_FULLSCREEN
+        if self._isFlagSet(Flag.FULLSCREEN):
+            self._display_flags ^= Flag.FULLSCREEN
         else:
-            self._display_flags |= Display.FLAG_FULLSCREEN
+            self._display_flags |= Flag.FULLSCREEN
         self.set_mode(self._resolution, flags)
 
     def set_mode(self, resolution, flags):
@@ -84,14 +100,8 @@ class Display:
     def close(self):
         pygame.quit()
 
-    FLAG_SWSURFACE = pygame.SWSURFACE
-    FLAG_HWSURFACE = pygame.HWSURFACE
-    FLAG_HWPALETTE = pygame.HWPALETTE
-    FLAG_DOUBLEBUF = pygame.DOUBLEBUF
-    FLAG_FULLSCREEN = pygame.FULLSCREEN
-    FLAG_OPENGL = pygame.OPENGL
-    FLAG_RESIZABLE = pygame.RESIZABLE
-    FLAG_NOFRAME = pygame.NOFRAME
+# Creating an instance of the _Display class. Really, this game engine is only going to use ONE display.
+Display=_Display()
 
 
-    
+

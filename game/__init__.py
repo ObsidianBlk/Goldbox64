@@ -3,7 +3,12 @@ from . import gbe
 _RUNNING = False
 
 
-def onKeyEvent(event, data):
+def _OnVideoResize(event, data):
+    flags = gbe.display.Display.flags
+    gbe.display.Display.set_mode(data["size"], flags)
+    print("Resized to {}".format(gbe.display.Display.resolution))
+
+def _OnKeyEvent(event, data):
     global _RUNNING
     if event == "KEYDOWN":
         if data["key"] == 27:
@@ -17,15 +22,16 @@ def onKeyEvent(event, data):
 
 
 def start():
-    global _RUNNING, onKeyEvent
+    global _RUNNING, _OnKeyEvent, _OnVideoResize
     t = gbe.time.Time()
     t.reset()
 
-    gbe.events.Events.listen("KEYDOWN", onKeyEvent)
-    gbe.events.Events.listen("KEYUP", onKeyEvent)
-    gbe.events.Events.listen("KEYPRESSED", onKeyEvent)
-    d = gbe.display.Display()
+    gbe.events.Events.listen("KEYDOWN", _OnKeyEvent)
+    gbe.events.Events.listen("KEYUP", _OnKeyEvent)
+    gbe.events.Events.listen("KEYPRESSED", _OnKeyEvent)
+    d = gbe.display.Display
     d.init()
+    gbe.events.Events.listen("VIDEORESIZE", _OnVideoResize)
     _RUNNING = True
     while _RUNNING:
         gbe.events.pollEmitter()
