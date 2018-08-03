@@ -3,7 +3,7 @@ import weakref
 import pygame
 
 def _getWeakRef(fn):
-    if not hasattr(fn, "__func__"):
+    if not hasattr(fn, "__call__"):
         return None
     if hasattr(fn, "__self__"):
         return weakref.WeakMethod(fn)
@@ -18,11 +18,10 @@ class _Events:
         self._signals = {}
 
     def _ClearUnreferenced(self):
-        def isempty(r):
-            return r() is not None
-
-        for signal, sigs in self._signals:
-            self._signals[signal] = filter(isempty, sigs)
+        for signal in self._signals:
+            removal = [s for s in self._signals[signal] if s() is None]
+            for r in removal:
+                self._signals[signal].remove(r)
 
     def listen(self, signal, fn):
         ref = _getWeakRef(fn)
@@ -31,7 +30,7 @@ class _Events:
         if not signal in self._signals:
             self._signals[signal] = []
         if not ref in self._signals[signal]:
-            self._signal[signal].append(ref)
+            self._signals[signal].append(ref)
 
     def unlisten(self, signal, fn):
         ref = _getWeakRef(fn)
@@ -46,12 +45,12 @@ class _Events:
             del self._signals[signal]
 
     def emit(self, signal, data):
-        if signal in self._signals:
-            for r in self._signals[signal]:
+       if signal in self._signals:
+           for r in self._signals[signal]:
                 fn = r()
                 if fn is not None:
-                    fn(signal, data)
-        self._ClearUnreferenced()
+                   fn(signal, data)
+       self._ClearUnreferenced()
 
 # Create the actual Events instance :)
 Events = _Events()
@@ -76,7 +75,7 @@ def _ReleaseKey(key):
             lastTick = k[1]
             _DOWNKEYS.remove(k)
             if tick - lastTick <= _ClickDelayMax:
-                Events.emit("KEYPRESSED", {key:key, mod:pygame.key.get_mods()})
+                Events.emit("KEYPRESSED", {"key":key, "mod":pygame.key.get_mods()})
             return # Done.
     # We found nothing, boss.
 
@@ -103,9 +102,9 @@ def _ReleaseButton(device, button):
             btnsrc.remove(b)
             if tick - lastTick <= _ClickDelayMax:
                 if device >= 0:
-                    Events.emit("JOYBUTTONPRESSED", {joy:device, button:button})
+                    Events.emit("JOYBUTTONPRESSED", {"joy":device, "button":button})
                 else:
-                    Events.emit("MOUSEBUTTONPRESSED", {pos:pygame.mouse.get_pos(), button:button})
+                    Events.emit("MOUSEBUTTONPRESSED", {"pos":pygame.mouse.get_pos(), "button":button})
             return # Done.
     # We found nothing, boss.
 
@@ -116,37 +115,39 @@ def pollEmitter():
             Events.emit("QUIT", {})
         elif event.type == pygame.KEYDOWN:
             _WatchKey(event.key)
-            Events.emit("KEYDOWN", {unicode:event.unicode, key:event.key, mod:event.mod})
+            Events.emit("KEYDOWN", {"unicode":event.unicode, "key":event.key, "mod":event.mod})
         elif event.type == pygame.KEYUP:
-            Events.emit("KEYUP", {key:event.key, mod:event.mod})
+            Events.emit("KEYUP", {"key":event.key, "mod":event.mod})
             _ReleaseKey(event.key)
-        elif event.type == pygame.MOUSEMOTION:
-            Events.emit("MOUSEMOTION", {pos:event.pos, rel:event.rel, buttons:event.buttons})
+        elif event.type == pygame.MOUSEMOTION: 
+            Events.emit("MOUSEMOTION", {"pos":event.pos, "rel":event.rel, "buttons":event.buttons})
         elif event.type == pygame.MOUSEBUTTONUP:
-            Events.emit("MOUSEBUTTONUP", {pos:event.pos, button:event.button})
+            Events.emit("MOUSEBUTTONUP", {"pos":event.pos, "button":event.button})
             _ReleaseButton(-1, event.button)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             _WatchButton(-1, event.button)
-            Events.emit("MOUSEBUTTONDOWN", {pos:event.pos, button:event.button})
+            Events.emit("MOUSEBUTTONDOWN", {"pos":event.pos, "button":event.button})
         elif event.type == pygame.VIDEORESIZE:
-            Events.emit("VIDEORESIZE", {size:event.size, w:event.w, h:event.h})
+            Events.emit("VIDEORESIZE", {"size":event.size, "w":event.w, "h":event.h})
         elif event.type == pygame.VIDEOEXPOSE:
             Events.emit("VIDEOEXPOSE", {})
         elif event.type == pygame.JOYAXISMOTION:
-            Events.emit("JOYAXISMOTION", {joy:event.joy, axis:event.axis, value:event.value})
+            Events.emit("JOYAXISMOTION", {"joy":event.joy, "axis":event.axis, "value":event.value})
         elif event.type == pygame.JOYBALLMOTION:
-            Events.emit("JOYBALLMOTION", {joy:event.joy, ball:event.ball, res:event.rel})
+            Events.emit("JOYBALLMOTION", {"joy":event.joy, "ball":event.ball, "res":event.rel})
         elif event.type == pygame.JOYHATMOTION:
-            Events.emit("JOYHATMOTION", {joy:event.joy, hat:event.hat, value:event.value})
+            Events.emit("JOYHATMOTION", {"joy":event.joy, "hat":event.hat, "value":event.value})
         elif event.type == pygame.JOYBUTTONUP:
-            Events.emit("JOYBUTTONUP", {joy:event.joy, button:event.button})
+            Events.emit("JOYBUTTONUP", {"joy":event.joy, "button":event.button})
             _ReleaseButton(event.joy, event.button)
         elif event.type == pygame.JOYBUTTONDOWN:
             _WatchButton(event.joy, event.button)
-            Events.emit("JOYBUTTONDOWN", {joy:event.joy, button:event.button})
+            Events.emit("JOYBUTTONDOWN", {"joy":event.joy, "button":event.button})
         else:
-            Events.emit("PYGUSER_{}".format(event.code), {})
-
+            if hasattr(event, "code"):
+                Events.emit("PYGUSER_{}".format(event.code), {})
+            else:
+                print("Unkown pygame event type '{}'".format(event.type))
 
 
 
