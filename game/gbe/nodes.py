@@ -8,8 +8,14 @@ class NodeError(Exception):
 
 class Node:
     def __init__(self, name="Node", parent=None):
+        self._parent = None
+        self._name = name
         self._children = []
-        self.name = name
+        if parent is not None:
+            try:
+                self.parent = parent
+            except NodeError as e:
+                raise e
 
     @property
     def type(self):
@@ -20,9 +26,9 @@ class Node:
         return self._parent
 
     @parent.setter
-    def parent(self, value):
+    def parent(self, new_parent):
         try:
-            self.parent_to_node(value)
+            self.parent_to_node(new_parent)
         except NodeError as e:
             raise e
 
@@ -38,6 +44,9 @@ class Node:
 
     @name.setter
     def name(self, value):
+        if self._parent is not None:
+            if self._parent.get_node(value) is not None:
+                raise NodeError("Parent already contains node named '{}'.".format(name))
         self._name = value
 
     @property
@@ -53,14 +62,16 @@ class Node:
     def parent_to_node(self, parent, allow_reparenting=False):
         if not isinstance(value, Node):
             raise NodeError("Node may only parent to another Node instance.")
-        if self._parent is None:
-            self._parent = value
-        elif self._parent != value:
-            if allow_Reparenting == False:
-                raise NodeError("Node already assigned a parent Node.")
-            if self._parent.remove_node(self) != self:
-                raise NodeError("Failed to remove self from current parent.")
-            parent.attach_node(self)
+        if self._parent is None or self._parent != parent:
+            if self._parent is not None:
+                if allow_Reparenting == False:
+                    raise NodeError("Node already assigned a parent Node.")
+                if self._parent.remove_node(self) != self:
+                    raise NodeError("Failed to remove self from current parent.")
+            try:
+                parent.attach_node(self)
+            except NodeError as e:
+                raise e
 
 
     def attach_node(self, node, reparent=False, index=-1):
@@ -71,6 +82,8 @@ class Node:
                 raise NodeError("Node already parented.")
             if node.parent.remove_node(node) != node:
                 raise NodeError("Failed to remove given node from it's current parent.")
+        if self.get_node(node.name) is not None:
+            raise NodeError("Node with name '{}' already attached.".format(node.name))
         node._parent = self
         if index < 0 or index >= len(self._children):
             self._children.append(node)
@@ -115,5 +128,28 @@ class Node:
         return None
 
 
+    def _update(self, dt):
+        if hasattr(self, "on_update"):
+            self.on_update(dt)
+
+        for c in self._children:
+            c._update(dt)
+
+    def _render(self, surface):
+        for c in self._children:
+            c._render(surface)
+
+        if hasattr(self, "on_render"):
+            self.on_render(surface)
 
 
+
+
+
+class NodeSurface(Node):
+    def __init__(self, name="NodeSurface", parent=None, display_ref=None):
+        try:
+            Node.__init__(self, name, parent)
+        except NodeError as e:
+            raise e
+        self._surface = None
