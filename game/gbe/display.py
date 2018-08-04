@@ -90,6 +90,10 @@ class _Display:
         self._resolution = self._display_surface.get_size()
         return self
 
+    def flip(self):
+        if self._init:
+            pygame.display.flip()
+
     def init(self):
         if self._init == False:
             self._init = True
