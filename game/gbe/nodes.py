@@ -5,7 +5,7 @@
     Python Version: 3.7
 '''
 
-NODETYPE_NODE = "NODE"
+from .display import Display
 
 class NodeError(Exception):
     pass
@@ -21,10 +21,6 @@ class Node:
                 self.parent = parent
             except NodeError as e:
                 raise e
-
-    @property
-    def type(self):
-        return NODETYPE_NODE
 
     @property
     def parent(self):
@@ -144,17 +140,222 @@ class Node:
         for c in self._children:
             c._render(surface)
 
-        if hasattr(self, "on_render"):
-            self.on_render(surface)
 
-
-
-
-
-class NodeSurface(Node):
-    def __init__(self, name="NodeSurface", parent=None, display_ref=None):
+class Node2D(Node):
+    def __init__(self, name="Node2D", parent=None):
         try:
             Node.__init__(self, name, parent)
         except NodeError as e:
             raise e
+
+    def _render(self, surface):
+        Node._render(self, surface)
+
+        if hasattr(self, "on_render"):
+            self._ACTIVE_SURF = surface
+            self.on_render()
+            del self._ACTIVE_SURF
+
+    def blit(self, img, pos=(0,0), rect=None):
+        if not hasattr(self, "_ACTIVE_SURF"):
+            return
+        self._ACTIVE_SURF.blit(img, pos, rect)
+
+    def fill(self, color):
+        if not hasattr(self, "_ACTIVE_SURF"):
+            return
+        self._ACTIVE_SURF.fill(color)
+
+    def draw_lines(points, color, thickness=1, closed=False):
+        if not hasattr(self, "_ACTIVE_SURF"):
+            return
+        pygame.draw.lines(self._ACTIVE_SURF, color, closed, points, thickness)
+
+    def draw_rect(rect, color, thinkness=1):
+        if not hasattr(self, "_ACTIVE_SURF"):
+            return
+        pygame.draw.rect(self._ACTIVE_SURF, color, rect, thickness)
+
+    def draw_ellipse(rect, color, thickness=1, fill_color=None):
+        if not hasattr(self, "_ACTIVE_SURF"):
+            return
+        if fill_color is not None:
+            pygame.draw.ellipse(self._ACTIVE_SURF, fill_color, rect)
+        if thickness > 0:
+            pygame.draw.ellipse(self._ACTIVE_SURF, color, rect, thickness)
+
+    def draw_circle(pos, radius, color, thickness=1, fill_color=None):
+        if not hasattr(self, "_ACTIVE_SURF"):
+            return
+        if fill_color is not None:
+            pygame.draw.circle(self._ACTIVE_SURF, fill_color, pos, radius)
+        if thickness > 0:
+            pygame.draw.circle(self._ACTIVE_SURF, color, pos, radius, thickness)
+
+    def draw_polygon(points, color, thickness=1, fill_color=None):
+        if not hasattr(self, "_ACTIVE_SURF"):
+            return
+        if fill_color is not None:
+            pygame.draw.polygon(self._ACTIVE_SURF, fill_color, points)
+        if thickness >= 1:
+            pygame.draw.polygon(self._ACTIVE_SURF, color, points, thickness)
+
+
+
+
+class NodeSurface(Node2D):
+    def __init__(self, name="NodeSurface", parent=None):
+        try:
+            Node2D.__init__(self, name, parent)
+        except NodeError as e:
+            raise e
+        self._offset = (0.0, 0.0)
+        self._scale = (1.0, 1.0)
+        self._keepAspectRatio = False
         self._surface = None
+        self._tsurface = None
+        self.set_surface()
+
+    def _updateTransformSurface(self):
+        if self._surface is None:
+            return
+        if self._scale[0] == 1.0 and self._scale[1] == 1.0:
+            self._tsurface = None
+        size = self._surface.get_size()
+        nw = size[0] * self._scale[0]
+        nh = 0
+        if self._keepAspectRatio:
+            nh = size[1] * self._scale[0]
+        else:
+            nh = size[1] * self._scale[1]
+        self._tsurface = pygame.Surface((nw, nh), pygame.SRCALPHA, self._surface)
+
+    @property
+    def resolution(self):
+        if self._surface is None:
+            return (0,0)
+        return self._surface.get_size()
+    @resolution.setter
+    def resolution(self, res):
+        try:
+            self.set_surface(res)
+        except (TypeError, ValueError) as e:
+            raise e
+
+    @property
+    def width(self):
+        return self.resolution[0]
+
+    @property
+    def height(self):
+        return self.resolution[1]
+
+    @property
+    def offset(self):
+        return self._offset
+    @offset.setter(self, offset):
+        if not isinstance(offset, tuple):
+            raise TypeError("Expected a tuple")
+        if len(offset) != 2:
+            raise ValueError("Expected tuple of length two.")
+        if not isinstance(offset[0], (int, float)) or not isinstance(offset[1], (int, float)):
+            raise TypeError("Expected number values.")
+        self._offset = (float(offset[0]), float(offset[1]))
+
+    @property
+    def offset_x(self):
+        return self._offset[0]
+    @offset_x.setter
+    def offset_x(self, x):
+        if not isinstance(x, (int, float)):
+            raise TypeError("Expected number value.")
+        self._offset = (x, self._offset[1])
+
+    @property
+    def offset_y(self):
+        return self._offset[1]
+    @offset_y.setter
+    def offset_y(self, y):
+        if not isinstance(y, (int, float)):
+            raise TypeError("Expected number value.")
+        self._offset = (self._offset[0], y)
+
+    @property
+    def scale(self):
+        return self._scale
+    @scale.setter
+    def scale(self, scale):
+        if self._keepAspectRatio:
+            if not isinstance(scale, (int, float)):
+                raise TypeError("Expected number value.")
+            self._scale = (scale, self._scale[1])
+        else:
+            if not isinstance(scale, tuple):
+                raise TypeError("Expected a tuple")
+            if len(scale) != 2:
+                raise ValueError("Expected tuple of length two.")
+            if not isinstance(scale[0], (int, float)) or not isinstance(scale[1], (int, float)):
+                raise TypeError("Expected number values.")
+            self._scale = scale
+        self._updateTransformSurface()
+
+    @property
+    def keep_aspect_ratio(self):
+        return self._keepAspectRatio
+    @keep_aspect_ratio.setter
+    def keep_aspect_ratio(self, keep):
+        self._keepAspectRatio = (keep == True)
+        self._updateTransformSurface()
+
+    def scale_to(self, target_resolution):
+        if self._surface is not None:
+            size = self._surface.get_size()
+            nscale = (float(size[0]) / float(target_resolution[0]), float(size[1]) / float(target_resolution[1]))
+            self.scale = nscale
+
+
+    def set_surface(self, resolution=None):
+        dsurf = Display.surface
+        if resolution is None:
+            if dsurf is not None:
+                self._surface = dsurf.convert_alpha()
+                self._updateTransformSurface()
+        else:
+            if not isinstance(r, tuple):
+                raise TypeError("Expected a tuple.")
+            if len(r) != 2:
+                raise ValueError("Expected a tuple of length two.")
+            if not isinstance(r[0], int) or not isinstance(r[1], int):
+                raise TypeError("Tuple expected to contain integers.")
+            if dsurf is not None:
+                self._surface = pygame.Surface(resolution, pygame.SRCALPHA, dsurf)
+            else:
+                self._surface = pygame.Surface(resolution, pygame.SRCALPHA)
+            self._updateTransformSurface()
+
+    def _render(self, surface):
+        if self._surface is None:
+            self.set_surface()
+        if self._surface is not None:
+            Node2D._render(self, self._surface)
+        else:
+            Node2D._render(self, surface)
+        self._scale_and_blit(surface)
+
+
+    def _scale_and_blit(self, dest):
+        dsize = dest.get_size()
+        pos = (int(self._offset[0]), int(self._offset[1]))
+
+        src = self._surface
+        if self._tsurface is not None:
+            pygame.transform.scale(self._surface, self._tsurface.get_size(), self._tsurface)
+            src = self._tsurface
+        if ssize[0] == dsize[0] and ssize[1] == dsize[1]:
+            dest.blit(src, pos)
+
+
+
+
+
+
