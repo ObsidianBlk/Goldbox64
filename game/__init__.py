@@ -1,4 +1,5 @@
 from . import gbe
+from .nodes import *
 
 _RUNNING = False
 
@@ -32,7 +33,15 @@ def start():
     d = gbe.display.Display
     d.init()
     gbe.events.Events.listen("VIDEORESIZE", _OnVideoResize)
+
+    root = NodeInterface()
+
     _RUNNING = True
     while _RUNNING:
         gbe.events.pollEmitter()
+        d.surface.fill(pygame.Color(0,0,255))
+        #pygame.draw.rect(d.surface, pygame.Color(255,0,0), (0,0,20,10), 1)
+        root._update(t.delta)
+        root._render(d.surface)
+        d.flip()
     d.close()
