@@ -6,6 +6,8 @@
 '''
 
 from .display import Display
+import pygame
+
 
 class NodeError(Exception):
     pass
@@ -166,17 +168,17 @@ class Node2D(Node):
             return
         self._ACTIVE_SURF.fill(color)
 
-    def draw_lines(points, color, thickness=1, closed=False):
+    def draw_lines(self, points, color, thickness=1, closed=False):
         if not hasattr(self, "_ACTIVE_SURF"):
             return
         pygame.draw.lines(self._ACTIVE_SURF, color, closed, points, thickness)
 
-    def draw_rect(rect, color, thinkness=1):
+    def draw_rect(self, rect, color, thickness=1):
         if not hasattr(self, "_ACTIVE_SURF"):
             return
         pygame.draw.rect(self._ACTIVE_SURF, color, rect, thickness)
 
-    def draw_ellipse(rect, color, thickness=1, fill_color=None):
+    def draw_ellipse(self, rect, color, thickness=1, fill_color=None):
         if not hasattr(self, "_ACTIVE_SURF"):
             return
         if fill_color is not None:
@@ -184,7 +186,7 @@ class Node2D(Node):
         if thickness > 0:
             pygame.draw.ellipse(self._ACTIVE_SURF, color, rect, thickness)
 
-    def draw_circle(pos, radius, color, thickness=1, fill_color=None):
+    def draw_circle(self, pos, radius, color, thickness=1, fill_color=None):
         if not hasattr(self, "_ACTIVE_SURF"):
             return
         if fill_color is not None:
@@ -192,7 +194,7 @@ class Node2D(Node):
         if thickness > 0:
             pygame.draw.circle(self._ACTIVE_SURF, color, pos, radius, thickness)
 
-    def draw_polygon(points, color, thickness=1, fill_color=None):
+    def draw_polygon(self, points, color, thickness=1, fill_color=None):
         if not hasattr(self, "_ACTIVE_SURF"):
             return
         if fill_color is not None:
@@ -221,6 +223,7 @@ class NodeSurface(Node2D):
             return
         if self._scale[0] == 1.0 and self._scale[1] == 1.0:
             self._tsurface = None
+            return
         size = self._surface.get_size()
         nw = size[0] * self._scale[0]
         nh = 0
@@ -229,6 +232,7 @@ class NodeSurface(Node2D):
         else:
             nh = size[1] * self._scale[1]
         self._tsurface = pygame.Surface((nw, nh), pygame.SRCALPHA, self._surface)
+        self._tsurface.fill(pygame.Color(0,0,0,0))
 
     @property
     def resolution(self):
@@ -253,7 +257,8 @@ class NodeSurface(Node2D):
     @property
     def offset(self):
         return self._offset
-    @offset.setter(self, offset):
+    @offset.setter
+    def offset(self, offset):
         if not isinstance(offset, tuple):
             raise TypeError("Expected a tuple")
         if len(offset) != 2:
@@ -319,6 +324,7 @@ class NodeSurface(Node2D):
         if resolution is None:
             if dsurf is not None:
                 self._surface = dsurf.convert_alpha()
+                self._surface.fill(pygame.Color(0,0,0,0))
                 self._updateTransformSurface()
         else:
             if not isinstance(r, tuple):
@@ -331,6 +337,7 @@ class NodeSurface(Node2D):
                 self._surface = pygame.Surface(resolution, pygame.SRCALPHA, dsurf)
             else:
                 self._surface = pygame.Surface(resolution, pygame.SRCALPHA)
+            self._surface.fill(pygame.Color(0,0,0,0))
             self._updateTransformSurface()
 
     def _render(self, surface):
@@ -351,8 +358,7 @@ class NodeSurface(Node2D):
         if self._tsurface is not None:
             pygame.transform.scale(self._surface, self._tsurface.get_size(), self._tsurface)
             src = self._tsurface
-        if ssize[0] == dsize[0] and ssize[1] == dsize[1]:
-            dest.blit(src, pos)
+        dest.blit(src, pos)
 
 
 
