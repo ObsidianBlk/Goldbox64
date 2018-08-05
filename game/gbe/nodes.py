@@ -6,6 +6,7 @@
 '''
 
 from .display import Display
+from .events import Events
 import pygame
 
 
@@ -213,7 +214,9 @@ class NodeSurface(Node2D):
             raise e
         self._offset = (0.0, 0.0)
         self._scale = (1.0, 1.0)
-        self._keepAspectRatio = False
+        self._scaleToDisplay = False
+        self._scaleDirty = False
+        self._keepAspectRatio = False 
         self._surface = None
         self._tsurface = None
         self.set_surface()
@@ -221,6 +224,18 @@ class NodeSurface(Node2D):
     def _updateTransformSurface(self):
         if self._surface is None:
             return
+
+        self._scaleDirty = False
+        if self._scaleToDisplay:
+            dsize = Display.resolution
+            ssize = self._surface.get_size()
+            self._scale = (dsize[0] / ssize[0], dsize[1] / ssize[1])
+            if self._keepAspectRatio:
+                if self._scale[0] < self._scale[1]:
+                    self._scale = (self._scale[0], self._scale[0])
+                else:
+                    self._scale = (self._scale[1], self._scale[1])
+
         if self._scale[0] == 1.0 and self._scale[1] == 1.0:
             self._tsurface = None
             return
@@ -312,6 +327,19 @@ class NodeSurface(Node2D):
         self._keepAspectRatio = (keep == True)
         self._updateTransformSurface()
 
+    @property
+    def scale_to_display(self):
+        return self._scaleToDisplay
+    @scale_to_display.setter
+    def scale_to_display(self, todisplay):
+        if todisplay == True:
+            self._scaleToDisplay = True
+            Events.listen("VIDEORESIZE", self._OnVideoResize)
+        else:
+            self._scaleToDisplay = False
+            Events.unlisten("VIDEORESIZE", self._OnVideoResize)
+        self._updateTransformSurface()
+
     def scale_to(self, target_resolution):
         if self._surface is not None:
             size = self._surface.get_size()
@@ -327,11 +355,11 @@ class NodeSurface(Node2D):
                 self._surface.fill(pygame.Color(0,0,0,0))
                 self._updateTransformSurface()
         else:
-            if not isinstance(r, tuple):
+            if not isinstance(resolution, tuple):
                 raise TypeError("Expected a tuple.")
-            if len(r) != 2:
+            if len(resolution) != 2:
                 raise ValueError("Expected a tuple of length two.")
-            if not isinstance(r[0], int) or not isinstance(r[1], int):
+            if not isinstance(resolution[0], int) or not isinstance(resolution[1], int):
                 raise TypeError("Tuple expected to contain integers.")
             if dsurf is not None:
                 self._surface = pygame.Surface(resolution, pygame.SRCALPHA, dsurf)
@@ -344,6 +372,8 @@ class NodeSurface(Node2D):
         if self._surface is None:
             self.set_surface()
         if self._surface is not None:
+            if self._scaleDirty:
+                self._updateTransformSurface()
             Node2D._render(self, self._surface)
         else:
             Node2D._render(self, surface)
@@ -352,15 +382,27 @@ class NodeSurface(Node2D):
 
     def _scale_and_blit(self, dest):
         dsize = dest.get_size()
-        pos = (int(self._offset[0]), int(self._offset[1]))
 
         src = self._surface
         if self._tsurface is not None:
             pygame.transform.scale(self._surface, self._tsurface.get_size(), self._tsurface)
             src = self._tsurface
+
+        # NOTE: For now, all surfaces will be aligned to the center of the destination surface if
+        # destination surface is larger than the source surface.
+        ssize = src.get_size()
+        posx = self._offset[0]
+        if dsize[0] > ssize[0]:
+            posx += (dsize[0] - ssize[0]) * 0.5
+        posy = self._offset[1]
+        if dsize[1] > ssize[1]:
+            posy += (dsize[1] - ssize[1]) * 0.5
+        pos = (int(posx), int(posy))
         dest.blit(src, pos)
 
-
+    def _OnVideoResize(self, event, data):
+        if self._scaleToDisplay:
+            self._scaleDirty = True
 
 
 
