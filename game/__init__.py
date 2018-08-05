@@ -32,7 +32,9 @@ def start():
     gbe.events.Events.listen("KEYPRESSED", _OnKeyEvent)
     d = gbe.display.Display
     d.init()
-    gbe.events.Events.listen("VIDEORESIZE", _OnVideoResize)
+    d.caption = "Goldbox 64"
+    d.watch_for_resize(True)
+    #gbe.events.Events.listen("VIDEORESIZE", _OnVideoResize)
 
     root = NodeInterface()
 

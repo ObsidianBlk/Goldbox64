@@ -6,6 +6,7 @@
 '''
 import pygame
 import weakref
+from .events import Events
 
 class Flag:
     SWSURFACE = pygame.SWSURFACE
@@ -74,12 +75,27 @@ class _Display:
     def opengl(self):
         return Flag.isSet(self._display_flags, Flag.OPENGL)
 
+    @property
+    def caption(self):
+        if pygame.display.get_init():
+            return pygame.display.get_caption()
+    @caption.setter
+    def caption(self, caption):
+        if pygame.display.get_init():
+            pygame.display.set_caption(caption)
+
     def toggle_fullscreen(self):
         if self._isFlagSet(Flag.FULLSCREEN):
             self._display_flags ^= Flag.FULLSCREEN
         else:
             self._display_flags |= Flag.FULLSCREEN
         self.set_mode(self._resolution, flags)
+
+    def watch_for_resize(self, enable):
+        if enable == True:
+            Events.listen("VIDEORESIZE", self._OnVideoResize)
+        elif enable == False:
+            Events.unlisten("VIDEORESIZE", self._OnVideoResize)
 
     def set_mode(self, resolution, flags):
         if (self._init == False):
@@ -103,6 +119,11 @@ class _Display:
 
     def close(self):
         pygame.quit()
+
+
+    def _OnVideoResize(self, event, data):
+        self.set_mode(data["size"], self.flags)
+        print("Resized to {}".format(self.resolution))
 
 # Creating an instance of the _Display class. Really, this game engine is only going to use ONE display.
 Display=_Display()
