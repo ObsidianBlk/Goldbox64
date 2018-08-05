@@ -149,11 +149,17 @@ def pollEmitter():
         elif event.type == pygame.JOYBUTTONDOWN:
             _WatchButton(event.joy, event.button)
             Events.emit("JOYBUTTONDOWN", {"joy":event.joy, "button":event.button})
+        elif event.type == pygame.ACTIVEEVENT:
+            if event.state == 1:
+                if event.gain == 0:
+                    Events.emit("FOCUSLOST", {})
+                elif event.gain == 1:
+                    Events.emit("FOCUSGAINED", {})
         else:
             if hasattr(event, "code"):
                 Events.emit("PYGUSER_{}".format(event.code), {})
             else:
-                print("Unkown pygame event type '{}'".format(event.type))
+                print("Unkown pygame event type '{}'".format(pygame.event.event_name(event.type)))
 
 
 
