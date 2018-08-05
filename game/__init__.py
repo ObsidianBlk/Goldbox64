@@ -39,6 +39,7 @@ def start():
     root = NodeInterface()
     root.scale_to_display = True
     root.keep_aspect_ratio = True
+    root.align_center = True
     root.set_surface((64, 64))
 
     _RUNNING = True

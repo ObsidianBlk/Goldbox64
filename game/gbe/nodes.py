@@ -216,7 +216,8 @@ class NodeSurface(Node2D):
         self._scale = (1.0, 1.0)
         self._scaleToDisplay = False
         self._scaleDirty = False
-        self._keepAspectRatio = False 
+        self._keepAspectRatio = False
+        self._alignCenter = False
         self._surface = None
         self._tsurface = None
         self.set_surface()
@@ -328,6 +329,13 @@ class NodeSurface(Node2D):
         self._updateTransformSurface()
 
     @property
+    def align_center(self):
+        return self._alignCenter
+    @align_center.setter
+    def align_center(self, center):
+        self._alignCenter = (center == True)
+
+    @property
     def scale_to_display(self):
         return self._scaleToDisplay
     @scale_to_display.setter
@@ -388,15 +396,14 @@ class NodeSurface(Node2D):
             pygame.transform.scale(self._surface, self._tsurface.get_size(), self._tsurface)
             src = self._tsurface
 
-        # NOTE: For now, all surfaces will be aligned to the center of the destination surface if
-        # destination surface is larger than the source surface.
         ssize = src.get_size()
         posx = self._offset[0]
-        if dsize[0] > ssize[0]:
-            posx += (dsize[0] - ssize[0]) * 0.5
         posy = self._offset[1]
-        if dsize[1] > ssize[1]:
-            posy += (dsize[1] - ssize[1]) * 0.5
+        if self._alignCenter:
+            if dsize[0] > ssize[0]:
+                posx += (dsize[0] - ssize[0]) * 0.5
+            if dsize[1] > ssize[1]:
+                posy += (dsize[1] - ssize[1]) * 0.5
         pos = (int(posx), int(posy))
         dest.blit(src, pos)
 
