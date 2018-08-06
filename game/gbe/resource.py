@@ -1,30 +1,42 @@
 
 
 import os, sys
+import logging
 import json
 import weakref
 import pygame
 from .resourceLoaders import *
 
 
+
 class ResourceError(Exception):
     pass
-
 _GAME_PATH=calculate_real_path(os.path.dirname(sys.argv[0]))
+
+def _BuildLogger():
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    log_format = logging.Formatter("[%(levelname)s : %(asctime)s] %(message)s")
+    log_handler = logging.FileHandler(join_path(_GAME_PATH, "logs/gbe.log"))
+    log_handler.setFormatter(log_format)
+    logger.addHandler(log_handler)
+    return logger
+_l = _BuildLogger()
 
 _RESOURCES={}
 
 def define_resource_type(rtype, sub_path, loader_fn):
     global _RESOURCES, _GAME_PATH, join_path
     if rtype in _RESOURCES:
-        raise ResourceError("Resource '{}' already defined.".format(rtype))
+        _l.error("Resource '{}' already defined.".format(rtype))
+        return
     fullpath = join_path(_GAME_PATH, sub_path)
     if not os.path.isdir(fullpath):
-        print("'{}' | '{}'".format(_GAME_PATH, fullpath))
-        raise ResourceError("'{}' is not a valid directory.".format(sub_path))
+        _l.warning("'{}' is not a valid directory.".format(sub_path))
     if not callable(loader_fn):
         raise ResourceError("Expected a callable as the resource loader.")
     _RESOURCES[rtype]={"r":[], "loader":loader_fn, "path":fullpath}
+    _l.info("Added resource type '{}' with search path '{}'.".format(rtype, sub_path))
 
 
 def configure(conf):
@@ -35,7 +47,7 @@ def configure(conf):
         if key in _RESOURCES:
             fullpath = join_path(_GAME_PATH, conf[key])
             if not os.path.isdir(fullpath):
-                raise ResourceError("'{}' is not a valid directory.".format(conf[key]))
+                _l.warning("'{}' is not a valid directory.".format(conf[key]))
             _RESOURCES[key]["path"] = fullpath
             _RESOURCES[key]["r"] = [] # Completely drop old list.
 
@@ -104,7 +116,8 @@ class Manager:
             try:
                 d["instance"] = loader(filename)
             except Exception as e:
-                raise e
+                _l.error(e.message)
+                return None
         return weakref.ref(d["instance"])
 
     def lock(self, rtype, src, lock=True):
