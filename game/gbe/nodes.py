@@ -7,6 +7,7 @@
 
 from .display import Display
 from .events import Events
+from .resource import Manager
 import pygame
 
 
@@ -16,9 +17,12 @@ class NodeError(Exception):
 
 class Node:
     def __init__(self, name="Node", parent=None):
-        self._parent = None
-        self._name = name
-        self._children = []
+        self._NODE_DATA={
+            "parent":None,
+            "name":name,
+            "children":[]
+            "resource":None
+        }
         if parent is not None:
             try:
                 self.parent = parent
@@ -27,7 +31,7 @@ class Node:
 
     @property
     def parent(self):
-        return self._parent
+        return self._NODE_DATA["parent"]
 
     @parent.setter
     def parent(self, new_parent):
@@ -38,39 +42,39 @@ class Node:
 
     @property
     def root(self):
-        if self._parent is None:
+        if self.parent is None:
             return self
-        return self._parent.root
+        return self.parent.root
 
     @property
     def name(self):
-        return self._name
+        return self._NODE_DATA["name"]
 
     @name.setter
     def name(self, value):
-        if self._parent is not None:
-            if self._parent.get_node(value) is not None:
+        if self.parent is not None:
+            if self.parent.get_node(value) is not None:
                 raise NodeError("Parent already contains node named '{}'.".format(name))
-        self._name = value
+        self._NODE_DATA["name"] = value
 
     @property
     def full_name(self):
-        if self._parent is None:
-            return self._name
-        return self._parent.full_name + "." + self._name
+        if self.parent is None:
+            return self.name
+        return self.parent.full_name + "." + self.name
 
     @property
     def child_count(self):
-        return len(this._children)
+        return len(this._NODE_DATA["children"])
 
     def parent_to_node(self, parent, allow_reparenting=False):
         if not isinstance(value, Node):
             raise NodeError("Node may only parent to another Node instance.")
-        if self._parent is None or self._parent != parent:
-            if self._parent is not None:
+        if self.parent is None or self.parent != parent:
+            if self.parent is not None:
                 if allow_Reparenting == False:
                     raise NodeError("Node already assigned a parent Node.")
-                if self._parent.remove_node(self) != self:
+                if self.parent.remove_node(self) != self:
                     raise NodeError("Failed to remove self from current parent.")
             try:
                 parent.attach_node(self)
@@ -88,11 +92,12 @@ class Node:
                 raise NodeError("Failed to remove given node from it's current parent.")
         if self.get_node(node.name) is not None:
             raise NodeError("Node with name '{}' already attached.".format(node.name))
-        node._parent = self
-        if index < 0 or index >= len(self._children):
-            self._children.append(node)
+        node._NODE_DATA["parent"] = self
+        children = self._NODE_DATA["children"]
+        if index < 0 or index >= len(children):
+            children.append(node)
         else:
-            self._children.insert(index, node)
+            children.insert(index, node)
 
     def remove_node(self, node):
         if isinstance(node, (str, unicode)):
@@ -110,9 +115,9 @@ class Node:
                     return node.parent.remove_node(node)
                 except NodeError as e:
                     raise e
-            if node in self._children:
-                self._children.remove(node)
-                node._parent = None
+            if node in self._NODE_DATA["children"]:
+                self._NODE_DATA["children"].remove(node)
+                node._NODE_DATA["parent"] = None
                 return node
         else:
             raise NodeError("Expected a Node instance or a string.")
@@ -120,11 +125,11 @@ class Node:
 
 
     def get_node(self, name):
-        if len(self._children) <= 0:
+        if self.child_count <= 0:
             return None
 
         subnames = name.split(".")
-        for c in self._children:
+        for c in self._NODE_DATA["children"]:
             if c.name == subnames[0]:
                 if len(subnames) > 1:
                     return c.get_node(".".join(subnames[1:-1]))
@@ -136,12 +141,14 @@ class Node:
         if hasattr(self, "on_update"):
             self.on_update(dt)
 
-        for c in self._children:
+        for c in self._NODE_DATA["children"]:
             c._update(dt)
 
     def _render(self, surface):
-        for c in self._children:
+        for c in self._NODE_DATA["children"]:
             c._render(surface)
+
+
 
 
 class Node2D(Node):
@@ -159,7 +166,7 @@ class Node2D(Node):
             self.on_render()
             del self._ACTIVE_SURF
 
-    def blit(self, img, pos=(0,0), rect=None):
+    def draw_image(self, img, pos=(0,0), rect=None):
         if not hasattr(self, "_ACTIVE_SURF"):
             return
         self._ACTIVE_SURF.blit(img, pos, rect)
@@ -212,6 +219,7 @@ class NodeSurface(Node2D):
             Node2D.__init__(self, name, parent)
         except NodeError as e:
             raise e
+        # TODO: Update this class to use the _NODE*_DATA={} structure.
         self._offset = (0.0, 0.0)
         self._scale = (1.0, 1.0)
         self._scaleToDisplay = False
@@ -413,4 +421,120 @@ class NodeSurface(Node2D):
 
 
 
+class NodeSprite(Node2D):
+    def __init__(self, name="NodeSprite", parent=None):
+        try:
+            Node2D.__init__(self, name, parent)
+        except NodeError as e:
+            raise e
+        self._NODESPRITE_DATA={
+            "rect":[0,0,0,0],
+            "image":"",
+            "scale":[1.0, 1.0],
+            "surface":None
+        }
 
+    @property
+    def rect(self):
+        return (self._NODESPRITE_DATA["rect"][0],
+            self._NODESPRITE_DATA["rect"][1],
+            self._NODESPRITE_DATA["rect"][2],
+            self._NODESPRITE_DATA["rect"][3])
+
+    @rect.setter
+    def rect(self, rect):
+        if not isinstance(rect, (list, tuple)):
+            raise TypeError("Expected a list or tuple.")
+        if len(rect) != 4:
+            raise ValueError("rect value contains wrong number of values.")
+        try:
+            self.rect_x = rect[0]
+            self.rect_y = rect[1]
+            self.rect_width = rect[2]
+            self.rect_height = rect[3]
+        except Exception as e:
+            raise e
+
+    @property
+    def rect_x(self):
+        return self._NODESPRITE_DATA["rect"][0]
+    @rect_x.setter
+    def rect_x(self, v):
+        if not isinstance(v, int):
+            raise TypeError("Expected integer value.")
+        self._NODESPRITE_DATA["rect"][0] = v
+
+    @property
+    def rect_y(self):
+        return self._NODESPRITE_DATA["rect"][1]
+    @rect_y.setter
+    def rect_y(self, v):
+        if not isinstance(v, int):
+            raise TypeError("Expected integer value.")
+        self._NODESPRITE_DATA["rect"][1] = v
+
+
+    @property
+    def rect_width(self):
+        return self._NODESPRITE_DATA["rect"][2]
+    @rect_width.setter
+    def rect_width(self, v):
+        if not isinstance(v, int):
+            raise TypeError("Expected integer value.")
+        self._NODESPRITE_DATA["rect"][2] = v
+
+
+    @property
+    def rect_height(self):
+        return self._NODESPRITE_DATA["rect"][3]
+    @rect_height.setter
+    def rect_height(self, v):
+        if not isinstance(v, int):
+            raise TypeError("Expected integer value.")
+        self._NODESPRITE_DATA["rect"][3] = v
+
+    @property
+    def center(self):
+        r = self._NODESPRITE_DATA["rect"]
+        return (int(r[0] + (r[2] * 0.5)), int(r[1] + (r[3] * 0.5)))
+
+    @property
+    def scale(self):
+        return (self._NODESPRITE_DATA["scale"][0], self._NODESPRITE_DATA["scale"][1])
+    @scale.setter(self, scale):
+        if not isinstance(scale, (list, tuple)):
+            raise TypeError("Expected a list or tuple.")
+        if len(scale) != 2:
+            raise ValueError("Scale contains wrong number of values.")
+        try:
+            self.scale_x = scale[0]
+            self.scale_y = scale[1]
+        except Exception as e:
+            raise e
+
+    @property
+    def scale_x(self):
+        return self._NODESPRITE_DATA["scale"][0]
+    @scale_x.setter
+    def scale_x(self, v):
+        if not isinstance(v, (int, float)):
+            raise TypeError("Expected number value.")
+        self._NODESPRITE_DATA["scale"][0] = float(v)
+
+    @property
+    def scale_y(self):
+        return self._NODESPRITE_DATA["scale"][1]
+    @scale_y.setter
+    def scale_y(self, v):
+        if not isinstance(v, (int, float)):
+            raise TypeError("Expected number value.")
+        self._NODESPRITE_DATA["scale"][1] = float(v)
+
+    @property
+    def image(self):
+        return self._NODESPRITE_DATA["image"]
+    @image.setter
+    def image(self, image):
+        if self._NODESPRITE_DATA["image"] != "":
+            self._NODESPRITE_DATA["surface"] = None # Clear reference to original surface.
+        pass
