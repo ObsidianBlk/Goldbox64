@@ -31,7 +31,7 @@ def start():
     t = gbe.time.Time()
     t.reset()
 
-    resources = gbe.resource.Manager()
+    resources = gbe.resource.ResourceManager()
 
     gbe.events.Events.listen("QUIT", _OnQuit)
     gbe.events.Events.listen("KEYDOWN", _OnKeyEvent)

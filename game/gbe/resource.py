@@ -51,7 +51,7 @@ def configure(conf):
             _RESOURCES[key]["path"] = fullpath
             _RESOURCES[key]["r"] = [] # Completely drop old list.
 
-class Manager:
+class ResourceManager:
     def __init__(self):
         pass
 
