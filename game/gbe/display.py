@@ -27,7 +27,7 @@ class _Display:
         self._init = False
         self._resolution = (width, height)
         self._display_surface = None
-        self._display_flags = Flag.RESIZABLE | Flag.HWSURFACE | Flag.DOUBLEBUF
+        self._display_flags = Flag.HWSURFACE | Flag.DOUBLEBUF
 
     @property
     def surface(self):
@@ -110,11 +110,11 @@ class _Display:
         if self._init:
             pygame.display.flip()
 
-    def init(self):
+    def init(self, width=0, height=0):
         if self._init == False:
             self._init = True
             pygame.init()
-            self.set_mode(self._resolution, self._display_flags)
+            self.set_mode((width, height), self._display_flags)
         return self
 
     def close(self):

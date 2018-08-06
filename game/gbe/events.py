@@ -134,6 +134,7 @@ def pollEmitter():
             _WatchButton(-1, event.button)
             Events.emit("MOUSEBUTTONDOWN", {"pos":event.pos, "button":event.button})
         elif event.type == pygame.VIDEORESIZE:
+            # NOTE: There is a resize bug in Linux. This will stop working after a short time. Grrr
             Events.emit("VIDEORESIZE", {"size":event.size, "w":event.w, "h":event.h})
         elif event.type == pygame.VIDEOEXPOSE:
             Events.emit("VIDEOEXPOSE", {})

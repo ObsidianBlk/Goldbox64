@@ -4,6 +4,10 @@ from .nodes import *
 _RUNNING = False
 
 
+def _OnQuit(event, data):
+    global _RUNNING
+    _RUNNING = False
+
 def _OnVideoResize(event, data):
     flags = gbe.display.Display.flags
     gbe.display.Display.set_mode(data["size"], flags)
@@ -23,15 +27,16 @@ def _OnKeyEvent(event, data):
 
 
 def start():
-    global _RUNNING, _OnKeyEvent, _OnVideoResize
+    global _RUNNING, _OnKeyEvent, _OnQuit, _OnVideoResize
     t = gbe.time.Time()
     t.reset()
 
+    gbe.events.Events.listen("QUIT", _OnQuit)
     gbe.events.Events.listen("KEYDOWN", _OnKeyEvent)
     gbe.events.Events.listen("KEYUP", _OnKeyEvent)
     gbe.events.Events.listen("KEYPRESSED", _OnKeyEvent)
     d = gbe.display.Display
-    d.init()
+    d.init(640, 480)
     d.caption = "Goldbox 64"
     d.watch_for_resize(True)
     #gbe.events.Events.listen("VIDEORESIZE", _OnVideoResize)
