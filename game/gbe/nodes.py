@@ -64,6 +64,14 @@ class Node:
         return self.parent.full_name + "." + self.name
 
     @property
+    def resource(self):
+        if self._NODE_DATA["resource"] is None:
+            # Only bother creating the instance if it's being asked for.
+            # All ResourceManager instances access same data.
+            self._NODE_DATA["resource"] = ResourceManager()
+        return self._NODE_DATA["resource"]
+
+    @property
     def child_count(self):
         return len(this._NODE_DATA["children"])
 
