@@ -75,6 +75,11 @@ class Node:
     def child_count(self):
         return len(this._NODE_DATA["children"])
 
+    def get_world_position(self):
+        if self.parent is None:
+            return (0,0)
+        return self.parent.get_world_position()
+
     def parent_to_node(self, parent, allow_reparenting=False):
         if not isinstance(value, Node):
             raise NodeError("Node may only parent to another Node instance.")
@@ -208,6 +213,13 @@ class Node2D(Node):
             self._ACTIVE_SURF = surface
             self.on_render()
             del self._ACTIVE_SURF
+
+    def get_world_position(self):
+        pos = self.position
+        if self.parent is None:
+            return pos
+        ppos = self.parent.get_world_position()
+        return (pos[0] + ppos[0], pos[1] + ppos[1])
 
     def _render(self, surface):
         self._callOnRender(surface)
