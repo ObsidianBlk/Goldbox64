@@ -187,6 +187,23 @@ class Node:
                 return c
         return None
 
+    def listen(self, signal, callback_fn):
+        try:
+            Events.listen(signal, callback_fn)
+        except Exception as e:
+            raise e
+
+    def unlisten(self, signal, callback_fn):
+        Events.unlisten(signal, callback_fn)
+
+    def emit(self, signal, data={}):
+        # NOTE: I'm currently forcing the existance of this "NODE" key in the dictionary given. Not sure if I'll keep this.
+        data["NODE"] = {
+            "name":self.name
+            "n":self
+        }
+        Events.emit(signal, data)
+
     def _init(self):
         if hasattr(self, "on_init"):
             self.on_init()
