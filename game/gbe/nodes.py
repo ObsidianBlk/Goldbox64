@@ -205,6 +205,12 @@ class Node:
         for c in self._NODE_DATA["children"]:
             c._pause()
 
+    def _start(self):
+        if hasattr(self, "on_start"):
+            self.on_start()
+        for c in self._NODE_DATA["children"]:
+            c._start()
+
     def _update(self, dt):
         if hasattr(self, "on_update"):
             self.on_update(dt)
