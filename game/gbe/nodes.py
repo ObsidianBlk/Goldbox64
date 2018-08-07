@@ -199,7 +199,7 @@ class Node:
     def emit(self, signal, data={}):
         # NOTE: I'm currently forcing the existance of this "NODE" key in the dictionary given. Not sure if I'll keep this.
         data["NODE"] = {
-            "name":self.name
+            "name":self.name,
             "n":self
         }
         Events.emit(signal, data)
