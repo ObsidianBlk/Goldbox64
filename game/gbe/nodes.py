@@ -187,6 +187,23 @@ class Node:
                 return c
         return None
 
+    def _init(self):
+        if hasattr(self, "on_init"):
+            self.on_init()
+        for c in self._NODE_DATA["children"]:
+            c._init()
+
+    def _close(self):
+        if hasattr(self, "on_close"):
+            self.on_close()
+        for c in self._NODE_DATA["children"]:
+            c._close()
+
+    def _pause(self):
+        if hasattr(self, "on_pause"):
+            self.on_pause()
+        for c in self._NODE_DATA["children"]:
+            c._pause()
 
     def _update(self, dt):
         if hasattr(self, "on_update"):
