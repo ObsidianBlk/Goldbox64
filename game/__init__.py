@@ -28,10 +28,7 @@ def _OnKeyEvent(event, data):
 
 def start():
     global _RUNNING, _OnKeyEvent, _OnQuit, _OnVideoResize
-    t = gbe.time.Time()
-    t.reset()
-
-    resources = gbe.resource.ResourceManager()
+    sm = gbe.statemachine.StateMachine()
 
     gbe.events.Events.listen("QUIT", _OnQuit)
     gbe.events.Events.listen("KEYDOWN", _OnKeyEvent)
@@ -41,7 +38,7 @@ def start():
     d.init(640, 480)
     d.caption = "Goldbox 64"
     d.watch_for_resize(True)
-    #gbe.events.Events.listen("VIDEORESIZE", _OnVideoResize)
+    d.set_clear_color(0,0,255)
 
     root = NodeInterface()
     root.scale_to_display = True
@@ -49,12 +46,14 @@ def start():
     root.align_center = True
     root.set_surface((64, 64))
 
+    sm.register_node(root)
+    sm.activate_node(root.name)
+
     _RUNNING = True
     while _RUNNING:
         gbe.events.pollEmitter()
-        d.surface.fill(pygame.Color(0,0,255))
-        #pygame.draw.rect(d.surface, pygame.Color(255,0,0), (0,0,20,10), 1)
-        root._update(t.delta)
-        root._render(d.surface)
-        d.flip()
+        sm.update()
+        sm.render()
+    sm.close()
     d.close()
+
