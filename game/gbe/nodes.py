@@ -249,6 +249,16 @@ class Node2D(Node):
         except NodeError as e:
             raise e 
 
+    @property
+    def resolution(self):
+        p = self.parent
+        # We don't directly have the answer, but maybe our parent does?
+        if p is not None:
+            if hasattr(p, "resolution"):
+                return p.resolution
+        # Otherwise the Display object should.
+        return Display.resolution
+
     def _callOnRender(self, surface):
         if hasattr(self, "on_render"):
             self._ACTIVE_SURF = surface
@@ -353,7 +363,7 @@ class NodeSurface(Node2D):
     @property
     def resolution(self):
         if self._surface is None:
-            return (0,0)
+            return super().resolution
         return self._surface.get_size()
     @resolution.setter
     def resolution(self, res):
