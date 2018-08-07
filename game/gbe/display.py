@@ -28,6 +28,11 @@ class _Display:
         self._resolution = (width, height)
         self._display_surface = None
         self._display_flags = Flag.HWSURFACE | Flag.DOUBLEBUF
+        self._clear_color = pygame.Color(0,0,0)
+
+    @property
+    def init(self):
+        return self._init
 
     @property
     def surface(self):
@@ -97,6 +102,9 @@ class _Display:
         elif enable == False:
             Events.unlisten("VIDEORESIZE", self._OnVideoResize)
 
+    def set_clear_color(self, r, g, b, a=255):
+        self._clear_color = pygame.Color(r, g, b, a)
+
     def set_mode(self, resolution, flags):
         if (self._init == False):
             self._init = True
@@ -105,6 +113,12 @@ class _Display:
         self._display_flags = self._display_surface.get_flags()
         self._resolution = self._display_surface.get_size()
         return self
+
+
+    def clear(self):
+        if self._display_surface is not None:
+            self._display_surface.fill(self._clear_color)
+
 
     def flip(self):
         if self._init:
