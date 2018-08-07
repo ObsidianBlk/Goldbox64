@@ -21,7 +21,8 @@ class Node:
             "parent":None,
             "name":name,
             "children":[],
-            "resource":None
+            "resource":None,
+            "position":(0,0)
         }
         if parent is not None:
             try:
@@ -75,10 +76,47 @@ class Node:
     def child_count(self):
         return len(this._NODE_DATA["children"])
 
+    @property
+    def position(self):
+        p = self._NODE_DATA["position"]
+        return (p[0], p[1])
+    @position.setter
+    def position(self, pos):
+        if not isinstance(pos, (list, tuple)):
+            raise TypeError("Expected a list or tuple.")
+        if len(pos) != 2:
+            raise ValueError("Wrong number of values given.")
+        try:
+            self.position_x = pos[0]
+            self.position_y = pos[1]
+        except Exception as e:
+            raise e
+
+    @property
+    def position_x(self):
+        return self._NODE_DATA["position"][0]
+    @position_x.setter
+    def position_x(self, v):
+        if not isinstance(v, (int, float)):
+            raise TypeError("Excepted an number value.")
+        self._NODE_DATA["position"][0] = float(v)
+
+    @property
+    def position_y(self):
+        return self._NODE_DATA["position"][1]
+    @position_y.setter
+    def position_y(self, v):
+        if not isinstance(v, (int, float)):
+            raise TypeError("Excepted an number value.")
+        self._NODE_DATA["position"][1] = float(v)
+
+
     def get_world_position(self):
         if self.parent is None:
             return (0,0)
-        return self.parent.get_world_position()
+        pos = self.position
+        ppos = self.parent.get_world_position()
+        return (pos[0] + ppos[0], pos[1] + ppos[1])
 
     def parent_to_node(self, parent, allow_reparenting=False):
         if not isinstance(value, Node):
@@ -169,57 +207,13 @@ class Node2D(Node):
         try:
             Node.__init__(self, name, parent)
         except NodeError as e:
-            raise e
-        self._NODE2D_DATA={
-            "position":[0.0, 0.0]
-        }
-
-    @property
-    def position(self):
-        p = self._NODE2D_DATA["position"]
-        return (p[0], p[1])
-    @position.setter
-    def position(self, pos):
-        if not isinstance(pos, (list, tuple)):
-            raise TypeError("Expected a list or tuple.")
-        if len(pos) != 2:
-            raise ValueError("Wrong number of values given.")
-        try:
-            self.position_x = pos[0]
-            self.position_y = pos[1]
-        except Exception as e:
-            raise e
-
-    @property
-    def position_x(self):
-        return self._NODE2D_DATA["position"][0]
-    @position_x.setter
-    def position_x(self, v):
-        if not isinstance(v, (int, float)):
-            raise TypeError("Excepted an number value.")
-        self._NODE2D_DATA["position"][0] = float(v)
-
-    @property
-    def position_y(self):
-        return self._NODE2D_DATA["position"][1]
-    @position_y.setter
-    def position_y(self, v):
-        if not isinstance(v, (int, float)):
-            raise TypeError("Excepted an number value.")
-        self._NODE2D_DATA["position"][1] = float(v)
+            raise e 
 
     def _callOnRender(self, surface):
         if hasattr(self, "on_render"):
             self._ACTIVE_SURF = surface
             self.on_render()
             del self._ACTIVE_SURF
-
-    def get_world_position(self):
-        pos = self.position
-        if self.parent is None:
-            return pos
-        ppos = self.parent.get_world_position()
-        return (pos[0] + ppos[0], pos[1] + ppos[1])
 
     def _render(self, surface):
         self._callOnRender(surface)
