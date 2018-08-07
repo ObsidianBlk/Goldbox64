@@ -7,7 +7,7 @@
 
 from .display import Display
 from .events import Events
-from .resource import Manager
+from .resource import ResourceManager
 import pygame
 
 
@@ -20,7 +20,7 @@ class Node:
         self._NODE_DATA={
             "parent":None,
             "name":name,
-            "children":[]
+            "children":[],
             "resource":None
         }
         if parent is not None:
@@ -165,14 +165,53 @@ class Node2D(Node):
             Node.__init__(self, name, parent)
         except NodeError as e:
             raise e
+        self._NODE2D_DATA={
+            "position":[0.0, 0.0]
+        }
 
-    def _render(self, surface):
-        Node._render(self, surface)
+    @property
+    def position(self):
+        p = self._NODE2D_DATA["position"]
+        return (p[0], p[1])
+    @position.setter
+    def position(self, pos):
+        if not isinstance(pos, (list, tuple)):
+            raise TypeError("Expected a list or tuple.")
+        if len(pos) != 2:
+            raise ValueError("Wrong number of values given.")
+        try:
+            self.position_x = pos[0]
+            self.position_y = pos[1]
+        except Exception as e:
+            raise e
 
+    @property
+    def position_x(self):
+        return self._NODE2D_DATA["position"][0]
+    @position_x.setter
+    def position_x(self, v):
+        if not isinstance(v, (int, float)):
+            raise TypeError("Excepted an number value.")
+        self._NODE2D_DATA["position"][0] = float(v)
+
+    @property
+    def position_y(self):
+        return self._NODE2D_DATA["position"][1]
+    @position_y.setter
+    def position_y(self, v):
+        if not isinstance(v, (int, float)):
+            raise TypeError("Excepted an number value.")
+        self._NODE2D_DATA["position"][1] = float(v)
+
+    def _callOnRender(self, surface):
         if hasattr(self, "on_render"):
             self._ACTIVE_SURF = surface
             self.on_render()
             del self._ACTIVE_SURF
+
+    def _render(self, surface):
+        self._callOnRender(surface)
+        Node._render(self, surface)
 
     def draw_image(self, img, pos=(0,0), rect=None):
         if not hasattr(self, "_ACTIVE_SURF"):
@@ -228,7 +267,6 @@ class NodeSurface(Node2D):
         except NodeError as e:
             raise e
         # TODO: Update this class to use the _NODE*_DATA={} structure.
-        self._offset = (0.0, 0.0)
         self._scale = (1.0, 1.0)
         self._scaleToDisplay = False
         self._scaleDirty = False
@@ -284,38 +322,7 @@ class NodeSurface(Node2D):
 
     @property
     def height(self):
-        return self.resolution[1]
-
-    @property
-    def offset(self):
-        return self._offset
-    @offset.setter
-    def offset(self, offset):
-        if not isinstance(offset, tuple):
-            raise TypeError("Expected a tuple")
-        if len(offset) != 2:
-            raise ValueError("Expected tuple of length two.")
-        if not isinstance(offset[0], (int, float)) or not isinstance(offset[1], (int, float)):
-            raise TypeError("Expected number values.")
-        self._offset = (float(offset[0]), float(offset[1]))
-
-    @property
-    def offset_x(self):
-        return self._offset[0]
-    @offset_x.setter
-    def offset_x(self, x):
-        if not isinstance(x, (int, float)):
-            raise TypeError("Expected number value.")
-        self._offset = (x, self._offset[1])
-
-    @property
-    def offset_y(self):
-        return self._offset[1]
-    @offset_y.setter
-    def offset_y(self, y):
-        if not isinstance(y, (int, float)):
-            raise TypeError("Expected number value.")
-        self._offset = (self._offset[0], y)
+        return self.resolution[1] 
 
     @property
     def scale(self):
@@ -413,8 +420,8 @@ class NodeSurface(Node2D):
             src = self._tsurface
 
         ssize = src.get_size()
-        posx = self._offset[0]
-        posy = self._offset[1]
+        posx = self.position_x
+        posy = self.position_y
         if self._alignCenter:
             if dsize[0] > ssize[0]:
                 posx += (dsize[0] - ssize[0]) * 0.5
@@ -443,6 +450,28 @@ class NodeSprite(Node2D):
         }
 
     @property
+    def image_width(self):
+        if self._NODESPRITE_DATA["surface"] is None:
+            return 0
+        surf = self._NODESPRITE_DATA["surface"]()
+        return surf.get_width()
+
+    @property
+    def image_height(self):
+        if self._NODESPRITE_DATA["surface"] is None:
+            return 0
+        surf = self._NODESPRITE_DATA["surface"]()
+        return surf.get_height()
+
+    @property
+    def sprite_width(self):
+        return int(self.rect_width * self.scale_x)
+
+    @property
+    def sprite_height(self):
+        return int(self.rect_height * self.scale_y)
+
+    @property
     def rect(self):
         return (self._NODESPRITE_DATA["rect"][0],
             self._NODESPRITE_DATA["rect"][1],
@@ -461,7 +490,7 @@ class NodeSprite(Node2D):
             self.rect_width = rect[2]
             self.rect_height = rect[3]
         except Exception as e:
-            raise e
+            raise e 
 
     @property
     def rect_x(self):
@@ -471,6 +500,7 @@ class NodeSprite(Node2D):
         if not isinstance(v, int):
             raise TypeError("Expected integer value.")
         self._NODESPRITE_DATA["rect"][0] = v
+        self._NODESPRITE_ValidateRect()
 
     @property
     def rect_y(self):
@@ -480,6 +510,7 @@ class NodeSprite(Node2D):
         if not isinstance(v, int):
             raise TypeError("Expected integer value.")
         self._NODESPRITE_DATA["rect"][1] = v
+        self._NODESPRITE_ValidateRect()
 
 
     @property
@@ -490,6 +521,7 @@ class NodeSprite(Node2D):
         if not isinstance(v, int):
             raise TypeError("Expected integer value.")
         self._NODESPRITE_DATA["rect"][2] = v
+        self._NODESPRITE_ValidateRect()
 
 
     @property
@@ -500,6 +532,7 @@ class NodeSprite(Node2D):
         if not isinstance(v, int):
             raise TypeError("Expected integer value.")
         self._NODESPRITE_DATA["rect"][3] = v
+        self._NODESPRITE_ValidateRect()
 
     @property
     def center(self):
@@ -509,7 +542,8 @@ class NodeSprite(Node2D):
     @property
     def scale(self):
         return (self._NODESPRITE_DATA["scale"][0], self._NODESPRITE_DATA["scale"][1])
-    @scale.setter(self, scale):
+    @scale.setter
+    def scale(self, scale):
         if not isinstance(scale, (list, tuple)):
             raise TypeError("Expected a list or tuple.")
         if len(scale) != 2:
@@ -528,6 +562,7 @@ class NodeSprite(Node2D):
         if not isinstance(v, (int, float)):
             raise TypeError("Expected number value.")
         self._NODESPRITE_DATA["scale"][0] = float(v)
+        self._NODESPRITE_DATA["scale_dirty"] = True
 
     @property
     def scale_y(self):
@@ -537,12 +572,128 @@ class NodeSprite(Node2D):
         if not isinstance(v, (int, float)):
             raise TypeError("Expected number value.")
         self._NODESPRITE_DATA["scale"][1] = float(v)
+        self._NODESPRITE_DATA["scale_dirty"] = True
 
     @property
     def image(self):
         return self._NODESPRITE_DATA["image"]
     @image.setter
-    def image(self, image):
+    def image(self, src):
+        src = src.strip()
+        if self._NODESPRITE_DATA["image"] == src:
+            return # Nothing to change... lol
         if self._NODESPRITE_DATA["image"] != "":
             self._NODESPRITE_DATA["surface"] = None # Clear reference to original surface.
-        pass
+        if src != "":
+            rm = self.resource
+            try:
+                if not rm.has("graphic", src):
+                    rm.store("graphic", src)
+                self._NODESPRITE_DATA["image"] = src
+                self._NODESPRITE_DATA["surface"] = rm.get("graphic", src)
+                if self._NODESPRITE_DATA["surface"] is None:
+                    self._NODESPRITE_DATA["image"] = ""
+                    self._NODESPRITE_DATA["rect"]=[0,0,0,0]
+                else:
+                    # Resetting the rect to identity for the new image.
+                    surf = self._NODESPRITE_DATA["surface"]()
+                    size = surf.get_size()
+                    self._NODESPRITE_DATA["rect"]=[0,0,size[0], size[1]]
+            except Exception as e:
+                raise e
+        else:
+            self._NODESPRITE_DATA["image"] = ""
+            self._NODESPRITE_DATA["rect"]=[0,0,0,0]
+
+    def _render(self, surface):
+        # Call the on_render() method, if any
+        Node2D._callOnRender(self, surface)
+        
+        # Paint the sprite onto the surface
+        if self._NODESPRITE_DATA["surface"] is not None:
+            rect = self._NODESPRITE_DATA["rect"]
+            scale = self._NODESPRITE_DATA["scale"]
+            surf = self._NODESPRITE_DATA["surface"]()
+            # Of course, only bother if we have a surface to work with.
+            if surf is not None:
+                # Do some prescaling work, if needed.
+                if self._NODESPRITE_DATA["scale_dirty"]:
+                    self._NODESPRITE_UpdateScaleSurface(scale, surf)
+                fsurf = surf # Initial assumption that the surface is also the "frame"
+                # If we have a "frame" surface, however, let's get it and blit the rect into the frame surface.
+                if "frame_surf" in self._NODESPRITE_DATA:
+                    fsurf = self._NODESPRITE_DATA["frame_surf"]
+                    fsurf.blit(surf, (0, 0), rect) 
+                # If scaling, then transform (scale) the frame surface into the scale surface and set the frame surface to the scale surface. 
+                if "scale_surf" in self._NODESPRITE_DATA:
+                    ssurf = self._NODESPRITE_DATA["scale_surf"]
+                    pygame.transform.scale(fsurf, ssurf.get_size(), ssurf)
+                    fsurf = ssurf
+
+                # Place the sprite! WHEEEEE!
+                pos = self.position
+                surface.blit(fsurf, pos)
+
+        # Call on all children
+        Node._render(self, surface)
+
+
+    def _NODESPRITE_UpdateScaleSurface(self, scale, surf):
+        self._NODESPRITE_DATA["scale_dirty"] = False
+        ssurf = None
+        if "scale_surf" in self._NODESPRITE_DATA:
+            ssurf = self._NODESPRITE_DATA["scale_surf"]
+
+        if scale[0] == 1.0 and scale[1] == 1.0:
+            if ssurf is not None:
+                del self._NODESPRITE_DATA["scale_surf"]
+            return
+        nw = int(self.rect_width * scale[0])
+        nh = int(self.rect_height * scale[1])
+
+        if nw != ssurf.get_width() or nh != ssurf.get_height():
+            ssurf = pygame.Surface((nw, nh), pygame.SRCALPHA, surf)
+            ssurf.fill(pygame.Color(0,0,0,0))
+            self._NODESPRITE_DATA["scale_surf"] = ssurf
+
+    def _NODESPRITE_ValidateRect(self):
+        if self._NODESPRITE_DATA["surface"] is None:
+            self._NODESPRITE_DATA["rect"] = [0,0,0,0]
+        else:
+            rect = self._NODESPRITE_DATA["rect"]
+            isize = (self.image_width, self.image_height)
+            if rect[0] < 0:
+                rect[2] += rect[0]
+                rect[0] = 0
+            elif rect[0] >= isize[0]:
+                rect[0] = isize[0]-1
+                rect[2] = 0
+            if rect[1] < 0:
+                rect[3] += rect[1]
+                rect[1] = 0
+            elif rect[1] >= isize[1]:
+                rect[1] = isize[1]-1
+                rect[3] = 0
+            if rect[2] < 0:
+                rect[2] = 0
+            elif rect[0] + rect[2] > isize[0]:
+                rect[2] = isize[0] - rect[0]
+            if rect[3] < 0:
+                rect[3] = 0
+            elif rect[1] + rect[3] > isize[1]:
+                rect[3] = isize[1] - rect[1]
+
+            fssize = [0,0]
+            if rect[2] > 0 and rect[3] > 0:
+                if rect[2] < isize[0] or rect[1] < isize[1]:
+                    surf = self._NODESPRITE_DATA["surface"]()
+                    self._NODESPRITE_DATA["frame_surf"] = pygame.Surface((rect[2], rect[3]), pygame.SRCALPHA, surf)
+            
+            if fssize[0] > 0 and fssize[1] > 0:
+                pass
+            elif "frame_surf" in self._NODESPRITE_DATA:
+                del self._NODESPRITE_DATA["frame_surf"]
+
+
+
+
