@@ -128,6 +128,7 @@ class _Display:
         if self._init == False:
             self._init = True
             pygame.display.init()
+            pygame.font.init() # Because there's really no reason NOT to.
             self.set_mode((width, height), self._display_flags)
         return self
 
