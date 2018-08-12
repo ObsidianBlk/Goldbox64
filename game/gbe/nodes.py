@@ -284,10 +284,13 @@ class Node2D(Node):
             return
         pygame.draw.lines(self._ACTIVE_SURF, color, closed, points, thickness)
 
-    def draw_rect(self, rect, color, thickness=1):
+    def draw_rect(self, rect, color, thickness=1, fill_color=None):
         if not hasattr(self, "_ACTIVE_SURF"):
             return
-        pygame.draw.rect(self._ACTIVE_SURF, color, rect, thickness)
+        if fill_color is not None:
+            self._ACTIVE_SURF.fill(fill_color, rect)
+        if thickness > 0:
+            pygame.draw.rect(self._ACTIVE_SURF, color, rect, thickness)
 
     def draw_ellipse(self, rect, color, thickness=1, fill_color=None):
         if not hasattr(self, "_ACTIVE_SURF"):
