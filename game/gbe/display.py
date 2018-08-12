@@ -127,7 +127,7 @@ class _Display:
     def init(self, width=0, height=0):
         if self._init == False:
             self._init = True
-            pygame.init()
+            pygame.display.init()
             self.set_mode((width, height), self._display_flags)
         return self
 
