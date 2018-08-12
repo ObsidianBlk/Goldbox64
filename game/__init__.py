@@ -46,6 +46,11 @@ def start():
     root.align_center = True
     root.set_surface((64, 64))
 
+    sprite = gbe.nodes.NodeSprite("Sprite", root)
+    sprite.image = "maptiles/Walls.png"
+    sprite.rect = (48, 32, 16, 16)
+    sprite.position = (20, 20)
+
     text = gbe.nodes.NodeText("TextNode", root)
     text.font_src = "IttyBitty.ttf"
     text.size = 4
