@@ -637,6 +637,7 @@ class NodeSprite(Node2D):
             "rect":[0,0,0,0],
             "image":"",
             "scale":[1.0, 1.0],
+            "scale_dirty":True,
             "surface":None
         }
 
@@ -809,6 +810,8 @@ class NodeSprite(Node2D):
             if surf is not None:
                 # Do some prescaling work, if needed.
                 if self._NODESPRITE_DATA["scale_dirty"]:
+                    self._NODESPRITE_DATA["scale_dirty"] = False
+                    self._NODESPRITE_UpdateFrameSurface(surf)
                     self._NODESPRITE_UpdateScaleSurface(scale, surf)
                 fsurf = surf # Initial assumption that the surface is also the "frame"
                 # If we have a "frame" surface, however, let's get it and blit the rect into the frame surface.
@@ -828,9 +831,24 @@ class NodeSprite(Node2D):
         # Call on all children
         Node._render(self, surface)
 
+    def _NODESPRITE_UpdateFrameSurface(self, surf):
+        rect = self.rect
+        ssize = surf.get_size()
+        if rect[2] == ssize[0] and rect[3] == ssize[1]:
+            if "frame_surf" in self._NODESPRITE_DATA:
+                del self._NODESPRITE_DATA
+            return
+
+        if "frame_surf" not in self._NODESPRITE_DATA:
+            self._NODESPRITE_DATA["frame_surf"] = pygame.Surface((rect[2], rect[3]), pygame.SRCALPHA, surf)
+        else:
+            fsurf = self._NODESPRITE_DATA["frame_surf"]
+            fsize = fsurf.get_size()
+            if fsize[0] != rect[2] or fsize[1] != rect[3]:
+                self._NODESPRITE_DATA["frame_surf"] = pygame.Surface((rect[2], rect[3]), pygame.SRCALPHA, surf)
+
 
     def _NODESPRITE_UpdateScaleSurface(self, scale, surf):
-        self._NODESPRITE_DATA["scale_dirty"] = False
         ssurf = None
         if "scale_surf" in self._NODESPRITE_DATA:
             ssurf = self._NODESPRITE_DATA["scale_surf"]
@@ -874,16 +892,7 @@ class NodeSprite(Node2D):
             elif rect[1] + rect[3] > isize[1]:
                 rect[3] = isize[1] - rect[1]
 
-            fssize = [0,0]
-            if rect[2] > 0 and rect[3] > 0:
-                if rect[2] < isize[0] or rect[1] < isize[1]:
-                    surf = self._NODESPRITE_DATA["surface"]()
-                    self._NODESPRITE_DATA["frame_surf"] = pygame.Surface((rect[2], rect[3]), pygame.SRCALPHA, surf)
-            
-            if fssize[0] > 0 and fssize[1] > 0:
-                pass
-            elif "frame_surf" in self._NODESPRITE_DATA:
-                del self._NODESPRITE_DATA["frame_surf"]
+            self._NODESPRITE_DATA["scale_dirty"] = True
 
 
 
