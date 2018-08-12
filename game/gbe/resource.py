@@ -173,5 +173,4 @@ class ResourceManager:
 define_resource_type("graphic", "graphics/", load_image)
 define_resource_type("audio", "audio/", load_audio)
 define_resource_type("json", "data/json/", load_JSON)
-
-
+define_resource_type("font", "fonts/", load_font)
