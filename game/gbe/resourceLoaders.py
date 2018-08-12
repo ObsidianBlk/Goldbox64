@@ -33,9 +33,11 @@ def load_audio(filename, params={}):
     if not os.path.isfile(filename):
         raise LoadError("Failed to load '{}'. Path missing or invalid.".format(filename))
     try:
-        return pygame.mixer.Sound(filename)
+        if pygame.mixer.get_init() is not None:
+            return pygame.mixer.Sound(filename)
     except pygame.error as e:
         raise LoadError("Pygame Exception: {}".format(e.message))
+    raise LoadError("Audio subsystem not initialized before attempting to obtain resource.")
 
 def load_font(filename, params={}):
     if not os.path.isfile(filename):
@@ -49,6 +51,7 @@ def load_font(filename, params={}):
             return pygame.font.Font(filename, size)
     except pygame.error as e:
         raise LoadError("Pygame Exception: {}".format(e.message))
+    raise LoadError("Font subsystem not initialized before attempting to obtain resource.")
 
 
 def load_JSON(filename, params={}):
