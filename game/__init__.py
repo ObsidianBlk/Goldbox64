@@ -46,6 +46,14 @@ def start():
     root.align_center = True
     root.set_surface((64, 64))
 
+    text = gbe.nodes.NodeText("TextNode", root)
+    text.font_src = "IttyBitty.ttf"
+    text.size = 4
+    text.antialias = False
+    text.text = "ObsidianBlk 123456"
+    text.set_color(255, 64, 128)
+    text.position_y = 30
+
     sm.register_node(root)
     sm.activate_node(root.name)
 
