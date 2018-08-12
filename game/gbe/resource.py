@@ -87,7 +87,7 @@ class ResourceManager:
 
     def store(self, rtype, src):
         global _RESOURCES
-        if type not in _RESOURCES:
+        if rtype not in _RESOURCES:
             raise ResourceError("Unknown resource type '{}'.".format(rtype))
         if self._getResourceDict(rtype, src) == None:
             _RESOURCES[rtype]["r"].append({"src":src, "instance":None, "locked":False})
@@ -101,7 +101,7 @@ class ResourceManager:
         _RESOURCES[rtype]["r"].remove(d)
         return self
 
-    def clear(self, rtype, src, ignore_lock):
+    def clear(self, rtype, src, ignore_lock=False):
         d = self._getResourceDict(rtype, src)
         if d is None:
             raise ResourceError("No '{}' resource '{}' stored.".format(rtype, src))

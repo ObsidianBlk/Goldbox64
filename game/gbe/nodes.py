@@ -74,7 +74,7 @@ class Node:
 
     @property
     def child_count(self):
-        return len(this._NODE_DATA["children"])
+        return len(self._NODE_DATA["children"])
 
     @property
     def position(self):
@@ -99,7 +99,7 @@ class Node:
     def position_x(self, v):
         if not isinstance(v, (int, float)):
             raise TypeError("Excepted an number value.")
-        self._NODE_DATA["position"][0] = float(v)
+        self._NODE_DATA["position"] = (float(v), self._NODE_DATA["position"][1])
 
     @property
     def position_y(self):
@@ -108,7 +108,7 @@ class Node:
     def position_y(self, v):
         if not isinstance(v, (int, float)):
             raise TypeError("Excepted an number value.")
-        self._NODE_DATA["position"][1] = float(v)
+        self._NODE_DATA["position"] = (self._NODE_DATA["position"][0], float(v))
 
 
     def get_world_position(self):
@@ -119,7 +119,7 @@ class Node:
         return (pos[0] + ppos[0], pos[1] + ppos[1])
 
     def parent_to_node(self, parent, allow_reparenting=False):
-        if not isinstance(value, Node):
+        if not isinstance(parent, Node):
             raise NodeError("Node may only parent to another Node instance.")
         if self.parent is None or self.parent != parent:
             if self.parent is not None:
@@ -489,6 +489,141 @@ class NodeSurface(Node2D):
     def _OnVideoResize(self, event, data):
         if self._scaleToDisplay:
             self._scaleDirty = True
+
+
+class NodeText(Node2D):
+    def __init__(self, name="NodeText", parent=None):
+        try:
+            Node2D.__init__(self, name, parent)
+        except NodeError as e:
+            raise e
+        self._NODETEXT_DATA={
+            "font_src":"",
+            "size":26,
+            "antialias":True,
+            "color":pygame.Color(255,255,255),
+            "background":None,
+            "text":"Some Text",
+            "surface":None
+        }
+
+    @property
+    def font_src(self):
+        return self._NODETEXT_DATA["font_src"]
+    @font_src.setter
+    def font_src(self, src):
+        res = self.resource
+        if src != "" and src != self._NODETEXT_DATA["font_src"] and res.is_valid("font", src):
+            self._NODETEXT_DATA["font_src"] = src
+            if not res.has("font", src):
+                res.store("font", src)
+            self._NODETEXT_DATA["surface"] = None
+
+    @property
+    def size(self):
+        return self._NODETEXT_DATA["size"]
+    @size.setter
+    def size(self, size):
+        if not isinstance(size, int):
+            raise TypeError("Expected integer value.")
+        if size <= 0:
+            raise ValueError("Size must be greater than zero.")
+        if size != self._NODETEXT_DATA["size"]:
+            self._NODETEXT_DATA["size"] = size
+            self._NODETEXT_DATA["surface"] = None
+
+    @property
+    def antialias(self):
+        return self._NODETEXT_DATA["antialias"]
+    @antialias.setter
+    def antialias(self, enable):
+        enable = (enable == True)
+        if enable != self._NODETEXT_DATA["antialias"]:
+            self._NODETEXT_DATA["antialias"] = enable
+            self._NODETEXT_DATA["surface"] = None
+
+    @property
+    def text(self):
+        return self._NODETEXT_DATA["text"]
+    @text.setter
+    def text(self, text):
+        if text != self._NODETEXT_DATA["text"]:
+            self._NODETEXT_DATA["text"] = text
+            self._NODETEXT_DATA["surface"] = None
+
+    def _setColor(self, cname, r, g, b, a):
+        if r < 0 or r > 255:
+            raise ValueError("Red value out of bounds.")
+        if g < 0 or g > 255:
+            raise ValueError("Green value out of bounds.")
+        if b < 0 or b > 255:
+            raise ValueError("Blue value out of bounds.")
+        if a < 0 or a > 255:
+            raise ValueError("Alpha value out of bounds.")
+        color = self._NODETEXT_DATA[cname]
+        if color.r != r or color.g != g or color.b != b or color.a != a:
+            self._NODETEXT_DATA[cname] = pygame.Color(r,g,b,a)
+            self._NODETEXT_DATA["surface"] = None
+
+    def _getColor(self, cname):
+        if self._NODETEXT_DATA[cname] is None:
+            return (0,0,0,0)
+        else:
+            c = self._NODETEXT_DATA[cname]
+            return (c.r, c.g, c.b, c.a)
+
+    def set_color(self, r, g, b, a=255):
+        try:
+            self._setColor("color", r, g, b, a)
+        except ValueError as e:
+            raise e
+        return self
+
+    def get_color(self):
+        return self._getColor("color")
+    
+    def set_background(self, r, g, b, a=255):
+        try:
+            self._setColor("background", r, g, b, a)
+        except ValueError as e:
+            raise e
+        return self
+
+    def clear_background(self):
+        if self._NODETEXT_DATA["background"] is not None:
+            self._NODETEXT_DATA["background"] = None
+            self._NODETEXT_DATA["surface"] = None
+        return self
+
+    def get_background(self):
+        c = self._getColor("background")
+        if c[3] <= 0:
+            return None
+        return c
+
+
+    def _render(self, surface):
+        if self._NODETEXT_DATA["surface"] is None and self._NODETEXT_DATA["text"] != "":
+            res = self.resource
+            fnt = res.get("font", self._NODETEXT_DATA["font_src"], {"size":self._NODETEXT_DATA["size"]})
+            if fnt is not None and fnt() is not None:
+                surf = None
+                try:
+                    text = self.text
+                    antialias = self.antialias
+                    color = self._NODETEXT_DATA["color"]
+                    background = self._NODETEXT_DATA["background"]
+                    surf = fnt().render(text, antialias, color, background)
+                except pygame.error as e:
+                    pass # TODO: Update to send out warning!
+                self._NODETEXT_DATA["surface"] = surf
+            # We really don't want to keep the font instance around... just in case we want to use the same font at different sizes.
+            res.clear("font", self._NODETEXT_DATA["font_src"])
+        Node2D._render(self, surface)
+        if self._NODETEXT_DATA["surface"] is not None:
+            pos = self.position
+            pos = (int(pos[0]), int(pos[1]))
+            surface.blit(self._NODETEXT_DATA["surface"], pos)
 
 
 
