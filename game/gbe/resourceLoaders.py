@@ -13,7 +13,8 @@ def calculate_real_path(path):
 def join_path(lpath, rpath):
     return os.path.normcase(os.path.normpath(os.path.join(lpath, rpath)))
 
-
+def file_exists(path):
+    return os.path.isfile(path)
 
 
 

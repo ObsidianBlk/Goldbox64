@@ -76,6 +76,12 @@ class ResourceManager:
                     return r
         return None
 
+    def is_valid(self, rtype, src):
+        global _RESOURCES
+        if rtype in _RESOURCES:
+            return file_exists(join_path(_RESOURCES[rtype]["path"], src))
+        return false
+
     def has(self, rtype, src):
         return (self._getResourceDict(rtype, src) is not None)
 
@@ -112,7 +118,7 @@ class ResourceManager:
             raise ResourceError("No '{}' resource '{}' stored.".format(rtype, src))
         if d["instance"] is None:
             loader = _RESOURCES[rtype]["loader"]
-            filename = join_path(self.data_path, src)
+            filename = join_path(_RESOURCES[rtype]["path"], src)
             try:
                 d["instance"] = loader(filename)
             except Exception as e:
