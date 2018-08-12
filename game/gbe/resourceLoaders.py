@@ -21,12 +21,11 @@ def file_exists(path):
 def load_image(filename, params={}):
     if not os.path.isfile(filename):
         raise LoadError("Failed to load '{}'. Path missing or invalid.".format(filename))
-    with open(filename) as f:
-        try:
-            i = pygame.image.load(f, filename)
-            return i.convert_alpha()
-        except pygame.error as e:
-            raise LoadError("Pygame/SDL Exception: {}".format(e.message))
+    try:
+        i = pygame.image.load(filename)
+        return i.convert_alpha()
+    except pygame.error as e:
+        raise LoadError("Pygame/SDL Exception: {}".format(e))
 
 
 def load_audio(filename, params={}):
@@ -36,7 +35,7 @@ def load_audio(filename, params={}):
         if pygame.mixer.get_init() is not None:
             return pygame.mixer.Sound(filename)
     except pygame.error as e:
-        raise LoadError("Pygame Exception: {}".format(e.message))
+        raise LoadError("Pygame Exception: {}".format(e))
     raise LoadError("Audio subsystem not initialized before attempting to obtain resource.")
 
 def load_font(filename, params={}):
@@ -50,7 +49,7 @@ def load_font(filename, params={}):
                     size = params["size"]
             return pygame.font.Font(filename, size)
     except pygame.error as e:
-        raise LoadError("Pygame Exception: {}".format(e.message))
+        raise LoadError("Pygame Exception: {}".format(e))
     raise LoadError("Font subsystem not initialized before attempting to obtain resource.")
 
 

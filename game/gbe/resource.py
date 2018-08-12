@@ -122,7 +122,7 @@ class ResourceManager:
             try:
                 d["instance"] = loader(filename, params)
             except Exception as e:
-                _l.error(e.message)
+                _l.error("{}".format(e))
                 return None
         return weakref.ref(d["instance"])
 
