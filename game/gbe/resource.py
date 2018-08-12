@@ -109,7 +109,7 @@ class ResourceManager:
             d["instance"] = None
         return self
 
-    def get(self, rtype, src):
+    def get(self, rtype, src, params={}):
         global _RESOURCES
         if rtype not in _RESOURCES:
             raise ResourceError("Unknown resource type '{}'.".format(rtype))
@@ -120,7 +120,7 @@ class ResourceManager:
             loader = _RESOURCES[rtype]["loader"]
             filename = join_path(_RESOURCES[rtype]["path"], src)
             try:
-                d["instance"] = loader(filename)
+                d["instance"] = loader(filename, params)
             except Exception as e:
                 _l.error(e.message)
                 return None

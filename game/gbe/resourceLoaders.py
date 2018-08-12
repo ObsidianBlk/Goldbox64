@@ -18,7 +18,7 @@ def file_exists(path):
 
 
 
-def load_image(filename):
+def load_image(filename, params={}):
     if not os.path.isfile(filename):
         raise LoadError("Failed to load '{}'. Path missing or invalid.".format(filename))
     with open(filename) as f:
@@ -29,7 +29,7 @@ def load_image(filename):
             raise LoadError("Pygame/SDL Exception: {}".format(e.message))
 
 
-def load_audio(filename):
+def load_audio(filename, params={}):
     if not os.path.isfile(filename):
         raise LoadError("Failed to load '{}'. Path missing or invalid.".format(filename))
     try:
@@ -37,9 +37,21 @@ def load_audio(filename):
     except pygame.error as e:
         raise LoadError("Pygame Exception: {}".format(e.message))
 
+def load_font(filename, params={}):
+    if not os.path.isfile(filename):
+        raise LoadError("Failed to load '{}'. Path missing or invalid.".format(filename))
+    try:
+        if pygame.font.get_init():
+            size = 26
+            if "size" in params:
+                if isinstance(params["size"], int) and params["size"] > 0:
+                    size = params["size"]
+            return pygame.font.Font(filename, size)
+    except pygame.error as e:
+        raise LoadError("Pygame Exception: {}".format(e.message))
 
 
-def load_JSON(filename):
+def load_JSON(filename, params={}):
     if not os.path.isfile(filename):
         raise LoaderError("File '{}' is missing or not a file.".format(filename))
     data = None
