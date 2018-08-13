@@ -40,7 +40,7 @@ class _Events:
 
     def unlisten(self, signal, fn):
         ref = _getWeakRef(fn)
-        if res is None or ref() is None:
+        if ref is None or ref() is None:
             return # Not a function. Nothing to do.
         if signal in self._signals:
             if ref in self._signals[signal]:
