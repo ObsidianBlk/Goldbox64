@@ -247,7 +247,10 @@ class Node2D(Node):
         try:
             Node.__init__(self, name, parent)
         except NodeError as e:
-            raise e 
+            raise e
+        self._NODE2D_DATA = {
+            "visible":True
+        }
 
     @property
     def resolution(self):
@@ -259,6 +262,13 @@ class Node2D(Node):
         # Otherwise the Display object should.
         return Display.resolution
 
+    @property
+    def visible(self):
+        return self._NODE2D_DATA["visible"]
+    @visible.setter
+    def visible(self, vis):
+        self._NODE2D_DATA["visible"] = (vis == True)
+
     def _callOnRender(self, surface):
         if hasattr(self, "on_render"):
             self._ACTIVE_SURF = surface
@@ -266,8 +276,9 @@ class Node2D(Node):
             del self._ACTIVE_SURF
 
     def _render(self, surface):
-        self._callOnRender(surface)
-        Node._render(self, surface)
+        if self._NODE2D_DATA["visible"]:
+            self._callOnRender(surface)
+            Node._render(self, surface)
 
     def draw_image(self, img, pos=(0,0), rect=None):
         if not hasattr(self, "_ACTIVE_SURF"):
