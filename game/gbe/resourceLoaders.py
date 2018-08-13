@@ -1,4 +1,5 @@
 import os
+import json
 import pygame
 
 
@@ -53,6 +54,13 @@ def load_font(filename, params={}):
     raise LoadError("Font subsystem not initialized before attempting to obtain resource.")
 
 
+class DataContainer:
+    def __init__(self, data):
+        self._data = data
+    @property
+    def data(self):
+        return self._data
+
 def load_JSON(filename, params={}):
     if not os.path.isfile(filename):
         raise LoaderError("File '{}' is missing or not a file.".format(filename))
@@ -60,7 +68,7 @@ def load_JSON(filename, params={}):
     try:
         with open(filename) as f:
             data = json.load(f)
-        return data
+        return DataContainer(data)
     except Exception as e:
         raise e
 

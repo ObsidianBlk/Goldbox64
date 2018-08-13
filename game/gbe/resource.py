@@ -2,7 +2,6 @@
 
 import os, sys
 import logging
-import json
 import weakref
 import pygame
 from .resourceLoaders import *
@@ -122,6 +121,7 @@ class ResourceManager:
             try:
                 d["instance"] = loader(filename, params)
             except Exception as e:
+                raise e
                 _l.error("{}".format(e))
                 return None
         return weakref.ref(d["instance"])
