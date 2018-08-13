@@ -26,23 +26,28 @@ class NodeGameMap(gbe.nodes.Node2D):
         self._layer = {}
         self._currentLayer = ""
         self._res = {
-            "environment":"",
-            "walls":""
+            "env_src":"",
+            "env":None,
+            "wall_src":"",
+            "walls":None,
+            "wall_index":-1,
+            "door_index":-1
         }
         self._topdown = {
             "size":8, # Pixels square
             "wall_color":pygame.Color(255, 255, 255),
             "blocked_color":pygame.Color(255, 0, 0)
         }
+        self._cellpos = [0,0]
         self._orientation = "n"
 
     @property
-    def environment_resource(self):
-        return self._res["horizon"]
+    def environment_source(self):
+        return self._res["env_src"]
 
     @property
-    def wall_resource(self):
-        return self._res["walls"]
+    def wall_source(self):
+        return self._res["wall_src"]
 
     @property
     def layer_count(self):
@@ -71,19 +76,48 @@ class NodeGameMap(gbe.nodes.Node2D):
             names.append(names)
         return names
 
+    @property
+    def orientation(self):
+        return self._orientation
 
-    def set_resources(self, environment, walls):
+    @property
+    def cell_position(self):
+        return (self._cellpos[0], self._cellpos[1])
+
+    def set_resources(self, env_src, wall_src):
         res = self.resource
-        if environment != self._res["environment"]:
-            if res.is_valid("graphic", environment):
-                self._res["environment"] = environment
-        if walls != self._res["walls"]:
-            if res.is_valid("graphic", walls):
-                self._res["walls"] = walls
+        if env_src != "" and env_src != self._res["env_src"]:
+            if res.is_valid("json", env_src):
+                if not res.has("json", env_src):
+                    res.store("json", env_src)
+                e = res.get("json", env_src)
+                if e is not None and e() is not None:
+                    self._res["env_src"] = env_src
+                    self._res["env"] = e
+                    # TODO: Load the images associated with the environments
+        if wall_src != "" and wall_src != self._res["wall_src"]:
+            if res.is_valid("json", wall_src):
+                if not res.has("json", wall_src):
+                    print("Storing resource {}".format(wall_src))
+                    res.store("json", wall_src)
+                w = res.get("json", wall_src)
+                print(w)
+                if w is not None and w() is not None:
+                    self._res["wall_src"] = wall_src
+                    self._res["walls"] = w
+                    # NOTE: I'm making a lot of assumptions to the structural validity of the data file, but...
+                    imgsrc = w().data["src"]
+                    if res.is_valid("graphic", imgsrc):
+                        if res.has("graphic", imgsrc):
+                            res.store("graphic", imgsrc)
+                else:
+                    print("Failed to get JSON instance {}".format(wall_src))
+            else:
+                print("Invalid JSON {}".format(wall_src))
 
 
     def add_layer(self, name, w, h):
-        if name == "" or name in self._layers:
+        if name == "" or name in self._layer:
             return
         self._layer[name] = {
             "w":w,
@@ -91,16 +125,24 @@ class NodeGameMap(gbe.nodes.Node2D):
             "cells":[]
         }
         for c in range(0, w*h):
-            self._layer[name]["cells"][c] = {
+            self._layer[name]["cells"].append({
                 "c":0, # Sky / Ceiling
                 "g":0, # Ground
-                "n":[-1,False], # North Wall | [<graphic index, -1 = None>, <blocking>]
-                "s":[-1,False], # South Wall
-                "e":[-1,False], # East Wall
-                "w":[-1,False] # West Wall
-            }
+                "n":[-1, False, -1, None], # North Wall | [<graphic index, -1 = None>, <blocking>, <door index, -1 = None, 0 = closed, 1=open>, <door target>]
+                "s":[-1, False, -1, None], # South Wall
+                "e":[-1, False, -1, None], # East Wall
+                "w":[-1, False, -1, None], # West Wall
+            })
         if self._currentLayer == "":
             self._currentLayer = name
+
+    def set_active_layer(self, name, x=0, y=0):
+        if name == "" or not (name in self._layers):
+            return
+        layer = self._layers[name]
+        if x >= 0 and x < layer["w"] and y >= 0 and y < layer["h"]:
+            self._currentLayer = name
+            self._cellpos = [x,y]
 
     def set_cell_env(self, x, y, ceiling=-1, ground=-1):
         if self._currentLayer == "":
@@ -128,6 +170,8 @@ class NodeGameMap(gbe.nodes.Node2D):
         if x >= 0 and x < layer["w"] and y >= 0 and y < layer["h"]:
             index = (y * layer["w"]) + x
             cell = layer["cells"]
+            if gi <= -2:
+                gi = self._res["wall_index"]
             if gi >= -1:
                 cell[index][face][0] = gi
                 if blocking is not None:
@@ -140,6 +184,26 @@ class NodeGameMap(gbe.nodes.Node2D):
             elif blocking is not None:
                 blocking = (blocking == True) # Forcing a boolean
                 cell[index][face][1] = blocking  
+
+    def next_wall(self):
+        if self._res["walls"] is not None:
+            w = self._res["walls"]()
+            if w is not None:
+                windex = self._res["wall_index"] + 1
+                if windex >= len(w.data["walls"]):
+                    windex = -1
+                self._res["wall_index"] = windex
+                print("Next Wall Index: {}".format(windex))
+
+    def prev_wall(self):
+        if self._res["walls"] is not None:
+            w = self._res["walls"]()
+            if w is not None:
+                windex = self._res["wall_index"] - 1
+                if windex < -1:
+                    windex = len(w.data["walls"]) - 1
+                self._res["wall_index"] = windex
+                print("Prev Wall Index: {}".format(windex))
 
     def turn_left(self):
         onum = self._d_s2n(self._orientation)
@@ -155,6 +219,36 @@ class NodeGameMap(gbe.nodes.Node2D):
             onum = 0
         self._orientation = self._d_n2s(onum)
 
+    def move_to(self, x, y):
+        if x >= 0 and x < self.current_layer_width and y >= 0 and y < self.current_layer_height:
+            self._cellpos = [x, y]
+
+    def move_forward(self, ignore_passible=False):
+        if ignore_passible or self.is_passible(self._cellpos[0], self._cellpos[1], self._orientation):
+            x = self._cellpos[0]
+            y = self._cellpos[1]
+            if self._orientation == "n":
+                y -= 1
+            elif self._orientation == "e":
+                x += 1
+            elif self._orientation == "s":
+                y += 1
+            elif self._orientation == "w":
+                x -= 1
+            self.move_to(x, y)
+
+    def move_backward(self, ignore_passible=False):
+        orient = self._orientation
+        if self._orientation == "n":
+            self._orientation = "s"
+        elif self._orientation == "s":
+            self._orientation = "n"
+        elif self._orientation == "e":
+            self._orientation = "w"
+        elif self._orientation == "w":
+            self._orientation = "e"
+        self.move_forward(ignore_passible)
+        self._orientation = orient
 
     def is_passible(self, x, y, d):
         """
@@ -208,7 +302,7 @@ class NodeGameMap(gbe.nodes.Node2D):
     def _RenderTopDown(self):
         cell_size = self._topdown["size"]
         size = self.resolution
-        pos = self.position
+        pos = self._cellpos
         lsize = (self.current_layer_width, self.current_layer_height)
         hcells = int(size[0] / cell_size)
         vcells = int(size[1] / cell_size)
@@ -256,7 +350,7 @@ class NodeGameMap(gbe.nodes.Node2D):
 
 
 
-class MapEditor(gbe.nodes.Node2D):
+class NodeMapEditor(gbe.nodes.Node2D):
     def __init__(self, name="MapEditor", parent=None):
         try:
             gbe.nodes.Node2D.__init__(self, name, parent)
@@ -264,11 +358,34 @@ class MapEditor(gbe.nodes.Node2D):
             raise e
 
     def on_start(self):
-        pass
+        self.listen("KEYPRESSED", self.on_keypressed)
 
     def on_pause(self):
-        pass
+        self.unlisten("KEYPRESSED", self.on_keypressed)
 
+    def on_keypressed(self, event, data):
+        p = self.parent
+        if p is None or not isinstance(p, NodeGameMap):
+            return
+
+        if data["key_name"] == "escape":
+            self.emit("QUIT")
+        if data["key_name"] == "w":
+            p.move_forward(True)
+        elif data["key_name"] == "s":
+            p.move_backward(True)
+        elif data["key_name"] == "a":
+            p.turn_left()
+        elif data["key_name"] == "d":
+            p.turn_right()
+        elif data["key_name"] == "space":
+            o = p.orientation
+            cpos = p.cell_position
+            p.set_cell_face(cpos[0], cpos[1], o)
+        elif data["key_name"] == "e":
+            p.next_wall()
+        elif data["key_name"] == "q":
+            p.prev_wall()
 
 
 
