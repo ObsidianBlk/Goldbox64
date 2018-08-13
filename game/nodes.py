@@ -308,11 +308,11 @@ class NodeGameMap(gbe.nodes.Node2D):
         vcells = int(size[1] / cell_size)
         cx = pos[0] - int(hcells * 0.5)
         cy = pos[1] - int(vcells * 0.5)
-        ry = -4
+        ry = -int(cell_size*0.5)
         for j in range(0, vcells+1):
             y = cy + j
             if y >= 0 and y < lsize[1]:
-                rx = -1
+                rx = -int(cell_size*0.5)
                 for i in range(0, hcells+1):
                     x = cx + i
                     if x >= 0 and x < lsize[0]:
@@ -327,7 +327,7 @@ class NodeGameMap(gbe.nodes.Node2D):
                             self.draw_rect((rx, ry, 2, cell_size), self._topdown["wall_color"], 0, self._topdown["wall_color"])
 
                         if cell["n"][1] == True:
-                            self.draw_lines([(rx+1, ry+1), (rx+(cell_size-1), ry+1)], self._topdown["blocked_color"], 1)
+                            self.draw_lines([(rx+1, ry+1), (rx+(cell_size-2), ry+1)], self._topdown["blocked_color"], 1)
                         if cell["e"][1] == True:
                             self.draw_lines([(rx+(cell_size-2), ry+1), (rx+(cell_size-2), ry+(cell_size-2))], self._topdown["blocked_color"], 1)
                         if cell["s"][1] == True:
@@ -356,6 +356,46 @@ class NodeMapEditor(gbe.nodes.Node2D):
             gbe.nodes.Node2D.__init__(self, name, parent)
         except gbe.nodes.Node2D as e:
             raise e
+        self._last_orientation = ""
+        self._size = 0
+        self._thickness = 1
+        self._color = pygame.Color(255,255,255)
+        self._points = None
+        self.pointer_size = 4
+
+    def _getPoints(self, size):
+        p = self.parent
+        o = p.orientation
+        points = self._points[o]
+
+        hw = int(size[0]*0.5)
+        hh = int(size[1]*0.5)
+        return (
+            (points[0][0] + hw, points[0][1] + hh),
+            (points[1][0] + hw, points[1][1] + hh),
+            (points[2][0] + hw, points[2][1] + hh)
+        )
+
+    @property
+    def pointer_size(self):
+        return self._size
+    @pointer_size.setter
+    def pointer_size(self, size):
+        if not isinstance(size, int):
+            raise TypeError("Size expected to be an integer.")
+        if size <= 0:
+            raise ValueError("Size must be greater than zero.")
+        if size != self._size:
+            self._size = size
+
+            # Now updating all of the pointer... ummm... points
+            hs = max(1, int(size * 0.5))
+            self._points = {
+                "n": ((0,-hs),(hs,hs),(-hs,hs)),
+                "s": ((0,hs),(hs,-hs),(-hs,-hs)),
+                "e": ((-hs,hs),(hs,0),(-hs,-hs)),
+                "w": ((hs,hs),(-hs,0),(hs,-hs))
+            }
 
     def on_start(self):
         self.listen("KEYPRESSED", self.on_keypressed)
@@ -387,7 +427,9 @@ class NodeMapEditor(gbe.nodes.Node2D):
         elif data["key_name"] == "q":
             p.prev_wall()
 
-
+    def on_render(self):
+        size = self.resolution
+        self.draw_lines(self._getPoints(size), self._color, self._thickness, True)
 
 
 
