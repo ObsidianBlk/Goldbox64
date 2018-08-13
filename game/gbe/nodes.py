@@ -326,6 +326,9 @@ class NodeSurface(Node2D):
         except NodeError as e:
             raise e
         # TODO: Update this class to use the _NODE*_DATA={} structure.
+        self._NODESURFACE_DATA={
+            "clear_color":None
+        }
         self._scale = (1.0, 1.0)
         self._scaleToDisplay = False
         self._scaleDirty = False
@@ -458,12 +461,33 @@ class NodeSurface(Node2D):
             self._surface.fill(pygame.Color(0,0,0,0))
             self._updateTransformSurface()
 
+    def set_clear_color(self, color):
+        if color is None:
+            self._NODESURFACE_DATA["clear_color"] = None
+        elif isinstance(color, (list, tuple)):
+            clen = len(color)
+            if clen == 3 or clen == 4:
+                iscolor = lambda v: isinstance(v, int) and v >= 0 and v < 256
+
+                if iscolor(color[0]) and iscolor(color[1]) and iscolor(color[2]):
+                    if clen == 3 or (clen == 4 and iscolor(color[3])):
+                        self._NODESURFACE_DATA["clear_color"] = pygame.Color(*color)
+
+    def get_clear_color(self):
+        cc = self._NODESURFACE_DATA["clear_color"]
+        if cc == None:
+            return None
+        return (cc.r, cc.g, cc.b, cc.a)
+
     def _render(self, surface):
         if self._surface is None:
             self.set_surface()
         if self._surface is not None:
             if self._scaleDirty:
                 self._updateTransformSurface()
+            cc = self._NODESURFACE_DATA["clear_color"]
+            if cc is not None:
+                self._surface.fill(cc)
             Node2D._render(self, self._surface)
         else:
             Node2D._render(self, surface)
