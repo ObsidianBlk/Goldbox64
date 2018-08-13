@@ -81,7 +81,7 @@ def _ReleaseKey(key):
             lastTick = k[1]
             _DOWNKEYS.remove(k)
             if tick - lastTick <= _ClickDelayMax:
-                Events.emit("KEYPRESSED", {"key":key, "mod":pygame.key.get_mods()})
+                Events.emit("KEYPRESSED", {"key":key, "mod":pygame.key.get_mods(), "key_name":pygame.key.name(key)})
             return # Done.
     # We found nothing, boss.
 
@@ -121,9 +121,9 @@ def pollEmitter():
             Events.emit("QUIT", {})
         elif event.type == pygame.KEYDOWN:
             _WatchKey(event.key)
-            Events.emit("KEYDOWN", {"unicode":event.unicode, "key":event.key, "mod":event.mod})
+            Events.emit("KEYDOWN", {"unicode":event.unicode, "key":event.key, "mod":event.mod, "key_name":pygame.key.name(event.key)})
         elif event.type == pygame.KEYUP:
-            Events.emit("KEYUP", {"key":event.key, "mod":event.mod})
+            Events.emit("KEYUP", {"key":event.key, "mod":event.mod, "key_name":pygame.key.name(event.key)})
             _ReleaseKey(event.key)
         elif event.type == pygame.MOUSEMOTION: 
             Events.emit("MOUSEMOTION", {"pos":event.pos, "rel":event.rel, "buttons":event.buttons})

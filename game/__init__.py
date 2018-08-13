@@ -18,11 +18,11 @@ def _OnKeyEvent(event, data):
     if event == "KEYDOWN":
         if data["key"] == 27:
             _RUNNING = False
-        print("Key {} down".format(data["key"]))
+        print("Key {} down".format(data["key_name"]))
     elif event == "KEYUP":
-        print("Key {} up".format(data["key"]))
+        print("Key {} up".format(data["key_name"]))
     elif event == "KEYPRESSED":
-        print("Key {} pressed".format(data["key"]))
+        print("Key {} pressed".format(data["key_name"]))
 
 
 
