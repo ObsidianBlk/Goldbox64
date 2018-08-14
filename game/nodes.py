@@ -388,10 +388,10 @@ class NodeGameMap(gbe.nodes.Node2D):
             rcell = self._getCell(fx - ovec[1], fy)
             rrcell = self._getCell(fx - (ovec[1]*2), fy)
         else: # Facing East/West
-            lcell = self._getCell(fx, fy + ovec[0])
-            llcell = self._getCell(fx, fy + (ovec[0]*2))
-            rcell = self._getCell(fx, fy - ovec[0])
-            rrcell = self._getCell(fx, fy - (ovec[0]*2))
+            lcell = self._getCell(fx, fy - ovec[0])
+            llcell = self._getCell(fx, fy - (ovec[0]*2))
+            rcell = self._getCell(fx, fy + ovec[0])
+            rrcell = self._getCell(fx, fy + (ovec[0]*2))
 
         hsw = int(size[0]*0.5)
         hsh = int(size[1]*0.5)
@@ -467,8 +467,8 @@ class NodeGameMap(gbe.nodes.Node2D):
             lcell = self._getCell(fx + ovec[1], fy)
             rcell = self._getCell(fx - ovec[1], fy)
         else: # Facing East/West
-            lcell = self._getCell(fx, fy + ovec[0])
-            rcell = self._getCell(fx, fy - ovec[0])
+            lcell = self._getCell(fx, fy - ovec[0])
+            rcell = self._getCell(fx, fy + ovec[0])
 
         hsw = int(size[0]*0.5)
         hsh = int(size[1]*0.5)
@@ -515,6 +515,34 @@ class NodeGameMap(gbe.nodes.Node2D):
         hsw = int(size[0]*0.5)
         hsh = int(size[1]*0.5)
 
+        ovec = self._getOrientVec()
+        lcell = rcell = None
+        if ovec[0] == 0: # Facing North/South
+            lcell = self._getCell(pos[0] + ovec[1], pos[1])
+            rcell = self._getCell(pos[0] - ovec[1], pos[1])
+        else: # Facing East/West
+            lcell = self._getCell(pos[0], pos[1] - ovec[0])
+            rcell = self._getCell(pos[0], pos[1] + ovec[0])
+
+        hsw = int(size[0]*0.5)
+        hsh = int(size[1]*0.5)
+
+        # Render from outside inwards!
+        if lcell is not None:
+            if lcell[o][0] >= 0:
+                rect = wdat["walls"][lcell[o][0]]["f_close"]
+                hw = int(rect[2]*0.5)
+                hh = int(rect[3]*0.5)
+                rw = hsw - hw
+                self.draw_image(wsurf, (0, hsh-hh), (rect[0]+(rect[2]-rw), rect[1], rw, rect[3])) 
+        if rcell is not None:
+            if rcell[o][0] >= 0:
+                rect = wdat["walls"][rcell[o][0]]["f_close"]
+                hw = int(rect[2]*0.5)
+                hh = int(rect[3]*0.5)
+                rw = hsw - hw
+                self.draw_image(wsurf, (size[0]-rw, hsh-hh), (rect[0], rect[1], rw, rect[3]))
+
         # Rendering the main cell!!
         frect = None # This will be used to place walls
         if fcell[o][0] >= 0:
@@ -558,11 +586,12 @@ class NodeGameMap(gbe.nodes.Node2D):
         if ehsurf() is None or egsurf() is None or wsurf() is None:
             return
 
+        oshift = lambda d: d if d >= 0 and d < 4 else (0 if d > 3 else 3)
 
         px = self._cellpos[0]
         py = self._cellpos[1]
-        orl = self._d_n2s(max(0, self._d_s2n(self._orientation) - 1))
-        orr = self._d_n2s((self._d_s2n(self._orientation) + 1)%4) 
+        orl = self._d_n2s(oshift(self._d_s2n(self._orientation) - 1))
+        orr = self._d_n2s(oshift(self._d_s2n(self._orientation) + 1)) 
 
         cell = self._getCell(px, py)
 
