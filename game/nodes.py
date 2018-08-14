@@ -28,6 +28,8 @@ class NodeGameMap(gbe.nodes.Node2D):
         self._res = {
             "env_src":"",
             "env":None,
+            "h_index":0,
+            "g_index":0,
             "wall_src":"",
             "walls":None,
             "wall_index":-1,
@@ -132,7 +134,7 @@ class NodeGameMap(gbe.nodes.Node2D):
         }
         for c in range(0, w*h):
             self._layer[name]["cells"].append({
-                "c":0, # Sky / Ceiling
+                "h":0, # Horizon
                 "g":0, # Ground
                 "n":[-1, False, -1, None], # North Wall | [<graphic index, -1 = None>, <blocking>, <door index, -1 = None, 0 = closed, 1=open>, <door target>]
                 "s":[-1, False, -1, None], # South Wall
@@ -271,6 +273,21 @@ class NodeGameMap(gbe.nodes.Node2D):
         return False
 
 
+    def toggle_render_mode(self):
+        if self._renderMode == 0:
+            self._renderMode = 1
+        else:
+            self._renderMode = 0
+
+    def set_render_mode(self, mode):
+        if mode <= 0:
+            self._renderMode = 0
+        else:
+            self._renderMode = 1
+
+    def get_render_mode(self):
+        return self._renderMode
+
     def _d_n2s(self, d): # _(d)irection_(n)umber_to_(s)tring
         if d == 0:
             return "n"
@@ -299,10 +316,21 @@ class NodeGameMap(gbe.nodes.Node2D):
         return -1
 
     def _getCell(self, x, y):
-        index = self._indexFromPos(x, y)
-        if index < 0:
-            return None
-        return self._layer[self._currentLayer]["cells"][index]
+        if x >=- 0 and x < self.current_layer_width and y >= 0 and y < self.current_layer_height:
+            index = self._indexFromPos(x, y)
+            return self._layer[self._currentLayer]["cells"][index]
+        return None
+
+    def _getOrientVec(self):
+        if self._orientation == "n":
+            return (0, -1)
+        elif self._orientation == "s":
+            return (0, 1)
+        elif self._orientation == "e":
+            return (1, 0)
+        elif self._orientation == "w":
+            return (-1, 0)
+        return (0,0)
 
 
     def _RenderTopDown(self):
@@ -345,8 +373,210 @@ class NodeGameMap(gbe.nodes.Node2D):
 
 
 
+    def _RenderPersFar(self, pos, size, o, orr, orl, wdat, wsurf):
+        ovec = self._getOrientVec()
+        fx = pos[0] + (ovec[0]*2)
+        fy = pos[1] + (ovec[1]*2)
+        fcell = self._getCell(fx, fy)
+        if fcell == None:
+            return # If we can't see the cell directly ahead, the other's won't be visible either!
+
+        lcell = llcell = rcell = rrcell = None
+        if ovec[0] == 0: # Facing North/South
+            lcell = self._getCell(fx + ovec[1], fy)
+            llcell = self._getCell(fx + (ovec[1]*2), fy)
+            rcell = self._getCell(fx - ovec[1], fy)
+            rrcell = self._getCell(fx - (ovec[1]*2), fy)
+        else: # Facing East/West
+            lcell = self._getCell(fx, fy + ovec[0])
+            llcell = self._getCell(fx, fy + (ovec[0]*2))
+            rcell = self._getCell(fx, fy - ovec[0])
+            rrcell = self._getCell(fx, fy - (ovec[0]*2))
+
+        hsw = int(size[0]*0.5)
+        hsh = int(size[1]*0.5)
+
+        # Rendering from edges to center
+        if llcell is not None:
+            if llcell[o][0] >= 0:
+                rect = wdat["walls"][llcell[o][0]]["f_far"]
+                hw = int(rect[2]*0.5)
+                hh = int(rect[3]*0.5)
+                self.draw_image(wsurf, (0, hsh-hh), (rect[0], rect[1], hw, rect[3]))
+        if rrcell is not None:
+            if rrcell[o][0] >= 0:
+                rect = wdat["walls"][rrcell[o][0]]["f_far"]
+                hw = int(rect[2]*0.5)
+                hh = int(rect[3]*0.5)
+                self.draw_image(wsurf, (size[0]-hw, hsh-hh), (rect[0]+hw, rect[1], hw, rect[3]))
+        if lcell is not None:
+            if lcell[o][0] >= 0:
+                rect = wdat["walls"][lcell[o][0]]["f_far"]
+                hw = int(rect[2]*0.5)
+                hh = int(rect[3]*0.5)
+                self.draw_image(wsurf, (hw, hsh-hh), (rect[0], rect[1], rect[2], rect[3]))
+            if lcell[orl][0] >= 0:
+                rect = wdat["walls"][lcell[orl][0]]["s_far"]
+                lsurf = pygame.transform.flip(wsurf.subsurface(rect), True, False)
+                hh = int(rect[3]*0.5)
+                self.draw_image(lsurf, (0, hsh-hh))
+        if rcell is not None:
+            if rcell[o][0] >= 0:
+                rect = wdat["walls"][rcell[o][0]]["f_far"]
+                hw = int(rect[2]*0.5)
+                hh = int(rect[3]*0.5)
+                self.draw_image(wsurf, (size[0]-(rect[2]+hw), hsh-hh), (rect[0], rect[1], rect[2], rect[3]))
+            if rcell[orr][0] >= 0:
+                rect = wdat["walls"][rcell[orr][0]]["s_far"]
+                hh = int(rect[3]*0.5)
+                self.draw_image(wsurf, (size[0]-rect[2], hsh-hh), (rect[0], rect[1], rect[2], rect[3]))
+
+        # Rendering the main cell!!
+        frect = None # This will be used to place walls
+        if fcell[o][0] >= 0:
+            frect = wdat["walls"][fcell[o][0]]["f_far"]
+            hw = int(frect[2]*0.5)
+            hh = int(frect[3]*0.5)
+            self.draw_image(wsurf, (hsw-hw, hsh-hh), (frect[0], frect[1], frect[2], frect[3]))
+        if fcell[orl][0] >= 0:
+            rect = wdat["walls"][fcell[orl][0]]["s_far"]
+            if frect is None:
+                # Kinda cheating in that it's known that all walls are the same size.
+                frect = wdat["walls"][fcell[orl][0]]["f_far"]
+            hw = int(frect[2]*0.5)
+            lsurf = pygame.transform.flip(wsurf.subsurface(rect), True, False)
+            self.draw_image(lsurf, (hsw-(hw+rect[2]), hsh-int(rect[3]*0.5)))
+        if fcell[orr][0] >= 0:
+            rect = wdat["walls"][fcell[orr][0]]["s_far"]
+            if frect is None:
+                frect = wdat["walls"][fcell[orr][0]]["f_far"]
+            hw = int(frect[2]*0.5)
+            self.draw_image(wsurf, (hsw+hw, hsh-int(rect[3]*0.5)), (rect[0], rect[1], rect[2], rect[3]))
+
+
+    def _RenderPersMid(self, pos, size, o, orr, orl, wdat, wsurf):
+        ovec = self._getOrientVec()
+        fx = pos[0] + ovec[0]
+        fy = pos[1] + ovec[1]
+        fcell = self._getCell(fx, fy)
+        if fcell == None:
+            return # If we can't see the cell directly ahead, the other's won't be visible either!
+
+        lcell = rcell = None
+        if ovec[0] == 0: # Facing North/South
+            lcell = self._getCell(fx + ovec[1], fy)
+            rcell = self._getCell(fx - ovec[1], fy)
+        else: # Facing East/West
+            lcell = self._getCell(fx, fy + ovec[0])
+            rcell = self._getCell(fx, fy - ovec[0])
+
+        hsw = int(size[0]*0.5)
+        hsh = int(size[1]*0.5)
+
+        # Render from outside inwards!
+        if lcell is not None:
+            if lcell[o][0] >= 0:
+                rect = wdat["walls"][lcell[o][0]]["f_mid"]
+                hw = int(rect[2]*0.5)
+                hh = int(rect[3]*0.5)
+                self.draw_image(wsurf, (0, hsh-hh), (rect[0]+hw, rect[1], int(rect[2]*0.5), rect[3])) 
+        if rcell is not None:
+            if rcell[o][0] >= 0:
+                rect = wdat["walls"][rcell[o][0]]["f_mid"]
+                hw = int(rect[2]*0.5)
+                hh = int(rect[3]*0.5)
+                self.draw_image(wsurf, (size[0]-hw, hsh-hh), (rect[0], rect[1], hw, rect[3]))
+
+        # Rendering the main cell!!
+        frect = None # This will be used to place walls
+        if fcell[o][0] >= 0:
+            frect = wdat["walls"][fcell[o][0]]["f_mid"]
+            hw = int(frect[2]*0.5)
+            hh = int(frect[3]*0.5)
+            self.draw_image(wsurf, (hsw-hw, hsh-hh), (frect[0], frect[1], frect[2], frect[3]))
+        if fcell[orl][0] >= 0:
+            rect = wdat["walls"][fcell[orl][0]]["s_mid"]
+            if frect is None:
+                # Kinda cheating in that it's known that all walls are the same size.
+                frect = wdat["walls"][fcell[orl][0]]["f_mid"]
+            hw = int(frect[2]*0.5)
+            lsurf = pygame.transform.flip(wsurf.subsurface(rect), True, False)
+            self.draw_image(lsurf, (hsw-(hw+rect[2]), hsh-int(rect[3]*0.5)))
+        if fcell[orr][0] >= 0:
+            rect = wdat["walls"][fcell[orr][0]]["s_mid"]
+            if frect is None:
+                frect = wdat["walls"][fcell[orr][0]]["f_mid"]
+            hw = int(frect[2]*0.5)
+            self.draw_image(wsurf, (hsw+hw, hsh-int(rect[3]*0.5)), (rect[0], rect[1], rect[2], rect[3]))
+
+
+    def _RenderPersClose(self, pos, size, o, orr, orl, cell, wdat, wsurf):
+        fcell = self._getCell(pos[0], pos[1])
+        hsw = int(size[0]*0.5)
+        hsh = int(size[1]*0.5)
+
+        # Rendering the main cell!!
+        frect = None # This will be used to place walls
+        if fcell[o][0] >= 0:
+            idx = fcell[o][0]
+            frect = wdat["walls"][idx]["f_close"]
+            hw = int(frect[2]*0.5)
+            hh = int(frect[3]*0.5)
+            self.draw_image(wsurf, (hsw-hw, hsh-hh), (frect[0], frect[1], frect[2], frect[3]))
+        if fcell[orl][0] >= 0:
+            idx = fcell[orl][0]
+            rect = wdat["walls"][idx]["s_close"]
+            if frect is None:
+                # Kinda cheating in that it's known that all walls are the same size.
+                frect = wdat["walls"][idx]["f_close"]
+            hw = int(frect[2]*0.5)
+            lsurf = pygame.transform.flip(wsurf.subsurface(rect), True, False)
+            self.draw_image(lsurf, (hsw-(hw+rect[2]), hsh-int(rect[3]*0.5)))
+        if fcell[orr][0] >= 0:
+            idx = fcell[orr][0]
+            rect = wdat["walls"][idx]["s_close"]
+            if frect is None:
+                frect = wdat["walls"][idx]["f_close"]
+            hw = int(frect[2]*0.5)
+            self.draw_image(wsurf, (hsw+hw, hsh-int(rect[3]*0.5)), (rect[0], rect[1], rect[2], rect[3]))
+
+
     def _RenderPerspective(self):
-        pass
+        # Getting ALL of the core resources
+        rm = self.resource
+        edat = self._res["env"]
+        wdat = self._res["walls"]
+        if edat is None or wdat is None or edat() is None or wdat() is None:
+            return
+        edat = edat().data
+        wdat = wdat().data
+        ehsurf = rm.get("graphic", edat["horizon"]["src"])
+        egsurf = rm.get("graphic", edat["ground"]["src"])
+        wsurf = rm.get("graphic", wdat["src"])
+        if ehsurf is None or egsurf is None or wsurf is None:
+            return
+        if ehsurf() is None or egsurf() is None or wsurf() is None:
+            return
+
+
+        px = self._cellpos[0]
+        py = self._cellpos[1]
+        orl = self._d_n2s(max(0, self._d_s2n(self._orientation) - 1))
+        orr = self._d_n2s((self._d_s2n(self._orientation) + 1)%4) 
+
+        cell = self._getCell(px, py)
+
+        # First, output the ground and horizon
+        # TODO Later, perhaps cut the horizon and ground to represent each possible cell instead of just the current one?
+        self.draw_image(ehsurf(), (0,0), edat["horizon"]["defs"][cell["h"]]["rect"])
+        self.draw_image(egsurf(), (0,32), edat["ground"]["defs"][cell["g"]]["rect"])
+
+        # Rendering the rest
+        size = self.resolution
+        self._RenderPersFar((px, py), size, self._orientation, orr, orl, wdat, wsurf())
+        self._RenderPersMid((px, py), size, self._orientation, orr, orl, wdat, wsurf())
+        self._RenderPersClose((px, py), size, self._orientation, orr, orl, cell, wdat, wsurf())
+
 
     def on_render(self):
         if self._renderMode == 0:
@@ -430,7 +660,9 @@ class NodeMapEditor(gbe.nodes.Node2D):
 
         if data["key_name"] == "escape":
             self.emit("QUIT")
-        if data["key_name"] == "w":
+        if data["key_name"] == "tab":
+            p.toggle_render_mode()
+        elif data["key_name"] == "w":
             p.move_forward(True)
         elif data["key_name"] == "s":
             p.move_backward(True)
