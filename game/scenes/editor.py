@@ -14,7 +14,7 @@ def get():
         root.set_clear_color((0,0,0,0))
 
         gamemap = NodeGameMap("GameMap", root)
-        gamemap.set_resources("", "walls.json")
+        gamemap.set_resources("environment.json", "walls.json")
         gamemap.add_layer("main", 10, 10)
 
         editor = NodeMapEditor("Editor", gamemap)
