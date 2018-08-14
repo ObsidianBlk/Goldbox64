@@ -4,18 +4,33 @@
 		"day_shade":[0,32,64,32],
 		"night_shade":[0,0,64,32],
 		"defs":[
-			"Night":[0,64,64,32],
-			"Day":[0,96,64,32],
-			"C. Wood":[0,128,64,32]
+			{
+				"name":"Night",
+				"rect":[0,64,64,32]
+			},
+			{
+				"name":"Day",
+				"rect":[0,96,64,32]
+			},
+			{
+				"name":"C. Wood",
+				"rect":[0,128,64,32]
+			}
 		]
 	},
 	"ground":{
-		"src":"maptiles/CeilingsFloors.png"
+		"src":"maptiles/CeilingsFloors.png",
 		"day_shade":[0,32,64,32],
 		"night_shade":[0,0,64,32],
 		"defs":[
-			"G. Wood":[128,0,64,32],
-			"G. Gravel":[128,32,64,32]
+			{
+				"name":"G. Wood",
+				"rect":[128,0,64,32]
+			},
+			{
+				"name":"G. Gravel",
+				"rect":[128,32,64,32]
+			}
 		]
 	}
 }
