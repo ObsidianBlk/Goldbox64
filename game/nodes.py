@@ -94,21 +94,27 @@ class NodeGameMap(gbe.nodes.Node2D):
                 if e is not None and e() is not None:
                     self._res["env_src"] = env_src
                     self._res["env"] = e
-                    # TODO: Load the images associated with the environments
+                    # NOTE: Making a lot of assumptions to the structural validity of the data file.
+                    isrc1 = e().data["horizon"]["src"]
+                    isrc2 = e().data["ground"]["src"]
+                    if res.is_valid("graphic", isrc1) and res.is_valid("graphic", isrc2):
+                        if not res.has("graphic", isrc1):
+                            res.store("graphic", isrc1)
+                        if not res.has("graphic", isrc2):
+                            res.store("graphic", isrc2)
         if wall_src != "" and wall_src != self._res["wall_src"]:
             if res.is_valid("json", wall_src):
                 if not res.has("json", wall_src):
                     print("Storing resource {}".format(wall_src))
                     res.store("json", wall_src)
                 w = res.get("json", wall_src)
-                print(w)
                 if w is not None and w() is not None:
                     self._res["wall_src"] = wall_src
                     self._res["walls"] = w
                     # NOTE: I'm making a lot of assumptions to the structural validity of the data file, but...
                     imgsrc = w().data["src"]
                     if res.is_valid("graphic", imgsrc):
-                        if res.has("graphic", imgsrc):
+                        if not res.has("graphic", imgsrc):
                             res.store("graphic", imgsrc)
                 else:
                     print("Failed to get JSON instance {}".format(wall_src))
@@ -396,6 +402,20 @@ class NodeMapEditor(gbe.nodes.Node2D):
                 "e": ((-hs,hs),(hs,0),(-hs,-hs)),
                 "w": ((hs,hs),(-hs,0),(hs,-hs))
             }
+
+    def set_color(self, color):
+        if isinstance(color, (tuple, list)):
+            clen = len(color)
+            if clen == 3 or clen == 4:
+                iscolor = lambda v : isinstance(v, int) and v >= 0 and v < 256
+                if iscolor(color[0]) and iscolor(color[1]) and iscolor(color[2]):
+                    if clen == 3:
+                        self._color = pygame.Color(color[0], color[1], color[2])
+                    elif clen == 4 and iscolor(color[3]):
+                        self._color = pygame.Color(color[0], color[1], color[2], color[3])
+
+    def get_color(self):
+        return (self._color.r, self._color.g, self._color.b, self._color.a)
 
     def on_start(self):
         self.listen("KEYPRESSED", self.on_keypressed)
