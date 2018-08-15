@@ -734,7 +734,8 @@ class NodeMapEditor(gbe.nodes.Node2D):
             return
 
         if data["key_name"] == "escape":
-            self.emit("QUIT")
+            self.emit("SCENECHANGE", {"scene":"MAIN_MENU", "hold":False})
+            #self.emit("QUIT")
         if data["key_name"] == "tab":
             p.toggle_render_mode()
         elif data["key_name"] == "w":

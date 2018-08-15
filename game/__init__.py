@@ -60,9 +60,9 @@ def start():
     #text.set_color(255, 64, 128)
     #text.position_y = 30
 
-    e = scenes.editor.get()
-    sm.register_node(e)
-    sm.activate_node(e.name)
+    sm.register_node(scenes.mainmenu.get())
+    sm.register_node(scenes.editor.get())
+    sm.activate_node("MAIN_MENU")
 
     _RUNNING = True
     while _RUNNING:
