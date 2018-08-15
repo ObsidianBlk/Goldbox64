@@ -276,7 +276,7 @@ class Node2D(Node):
             del self._ACTIVE_SURF
 
     def _render(self, surface):
-        if self._NODE2D_DATA["visible"]:
+        if self._NODE2D_DATA["visible"] == True:
             self._callOnRender(surface)
             Node._render(self, surface)
 
@@ -491,6 +491,9 @@ class NodeSurface(Node2D):
         return (cc.r, cc.g, cc.b, cc.a)
 
     def _render(self, surface):
+        if self.visible == False:
+            return
+
         if self._surface is None:
             self.set_surface()
         if self._surface is not None:
@@ -599,7 +602,7 @@ class NodeText(Node2D):
         if a < 0 or a > 255:
             raise ValueError("Alpha value out of bounds.")
         color = self._NODETEXT_DATA[cname]
-        if color.r != r or color.g != g or color.b != b or color.a != a:
+        if color is None or color.r != r or color.g != g or color.b != b or color.a != a:
             self._NODETEXT_DATA[cname] = pygame.Color(r,g,b,a)
             self._NODETEXT_DATA["surface"] = None
 
@@ -641,6 +644,9 @@ class NodeText(Node2D):
 
 
     def _render(self, surface):
+        if self.visible == False:
+            return
+
         if self._NODETEXT_DATA["surface"] is None and self._NODETEXT_DATA["text"] != "":
             res = self.resource
             fnt = res.get("font", self._NODETEXT_DATA["font_src"], {"size":self._NODETEXT_DATA["size"]})
@@ -836,6 +842,9 @@ class NodeSprite(Node2D):
             self._NODESPRITE_DATA["rect"]=[0,0,0,0]
 
     def _render(self, surface):
+        if self.visible == False:
+            return 
+
         # Call the on_render() method, if any
         Node2D._callOnRender(self, surface)
         
