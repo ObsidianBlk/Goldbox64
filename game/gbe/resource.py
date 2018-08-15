@@ -24,7 +24,7 @@ _l = _BuildLogger()
 
 _RESOURCES={}
 
-def define_resource_type(rtype, sub_path, loader_fn):
+def define_resource_type(rtype, sub_path, loader_fn, saver_fn=None):
     global _RESOURCES, _GAME_PATH, join_path
     if rtype in _RESOURCES:
         _l.error("Resource '{}' already defined.".format(rtype))
@@ -34,7 +34,7 @@ def define_resource_type(rtype, sub_path, loader_fn):
         _l.warning("'{}' is not a valid directory.".format(sub_path))
     if not callable(loader_fn):
         raise ResourceError("Expected a callable as the resource loader.")
-    _RESOURCES[rtype]={"r":[], "loader":loader_fn, "path":fullpath}
+    _RESOURCES[rtype]={"r":[], "loader":loader_fn, "saver":saver_fn, "path":fullpath}
     _l.info("Added resource type '{}' with search path '{}'.".format(rtype, sub_path))
 
 
@@ -126,6 +126,31 @@ class ResourceManager:
                 return None
         return weakref.ref(d["instance"])
 
+    def load(self, rtype, src, params={}):
+        global _RESOURCES
+        if rtype not in _RESOURCES:
+            raise ResourceError("Unknown resource type '{}'.".format(rtype))
+        loader = _RESOURCES[rtype]["loader"]
+        filename = join_path(_RESOURCES[rtype]["path"], src)
+        try:
+            return loader(filename, params)
+        except Exception as e:
+            raise e
+
+
+    def save(self, rtype, dst, data):
+        global _RESOURCES
+        if rtype not in _RESOURCES:
+            raise ResourceError("Unknown resource type '{}'.".format(rtype))
+        if _RESOURCES[rtype]["saver"] is None:
+            raise ResourceError("Resource type '{}' has no defined saving function.".format(rtype))
+        saver = _RESOURCES[rtype]["saver"]
+        filename = join_path(_RESOURCES[rtype]["path"], dst)
+        try:
+            saver(filename, data)
+        except Exception as e:
+            raise e
+
     def lock(self, rtype, src, lock=True):
         d = self._getResourceDict(rtype, src)
         if d is None:
@@ -173,4 +198,6 @@ class ResourceManager:
 define_resource_type("graphic", "graphics/", load_image)
 define_resource_type("audio", "audio/", load_audio)
 define_resource_type("json", "data/json/", load_JSON)
+define_resource_type("maps", "data/maps/", load_JSON)
+define_resource_type("user_maps", "maps/", load_JSON, save_JSON)
 define_resource_type("font", "fonts/", load_font)

@@ -72,4 +72,11 @@ def load_JSON(filename, params={}):
     except Exception as e:
         raise e
 
+def save_JSON(filename, data):
+    try:
+        with open(filename, "w") as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        raise e
+
 
