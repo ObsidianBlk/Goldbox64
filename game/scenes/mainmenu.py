@@ -13,6 +13,13 @@ def get():
         root.set_surface((64, 64))
         root.set_clear_color((0,0,0,0))
 
+        gmap = NodeGameMap("gm", root)
+        gmap.set_resources("environment.json", "walls.json")
+        gmap.set_render_mode(1)
+        gmap.load_map("main", False)
+
+        mwalker = NodeMapWalker("MapWalker", gmap)
+
         menu = NodeOptions("Options", root)
         #menu.add_option("IttyBitty.ttf", 4, "Game", "SCENECHANGE", {"scene":"Game", "hold":False})
         menu.add_option("IttyBitty.ttf", 4, "Editor", "SCENECHANGE", {"scene":"Editor", "hold":False})

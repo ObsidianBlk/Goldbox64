@@ -1,4 +1,4 @@
-
+import random
 from . import gbe
 import pygame
 
@@ -353,6 +353,8 @@ class NodeGameMap(gbe.nodes.Node2D):
             elif self._orientation == "w":
                 x -= 1
             self.move_to(x, y)
+            return True
+        return False
 
     def move_backward(self, ignore_passible=False):
         orient = self._orientation
@@ -364,14 +366,15 @@ class NodeGameMap(gbe.nodes.Node2D):
             self._orientation = "w"
         elif self._orientation == "w":
             self._orientation = "e"
-        self.move_forward(ignore_passible)
+        res = self.move_forward(ignore_passible)
         self._orientation = orient
+        return res
 
     def is_passible(self, x, y, d):
         """
         Returns true if it's possible to move forward from the x, y map position in the direction given.
-        d - 0 = North, 1 = East, 2 = South, 3 = West
         """
+        d = self._d_s2n(d)
         if self._currentLayer == "" or d < 0 or d >= 4:
             return False
         layer = self._layer[self._currentLayer]
@@ -855,6 +858,34 @@ class NodeMapEditor(gbe.nodes.Node2D):
     def on_render(self):
         size = self.resolution
         self.draw_lines(self._getPoints(size), self._color, self._thickness, True)
+
+
+
+
+class NodeMapWalker(gbe.nodes.Node):
+    def __init__(self, name="MapWalker", parent=None):
+        try:
+            gbe.nodes.Node.__init__(self, name, parent)
+        except NodeError as e:
+            raise e
+        self._delta = 0
+
+    def on_update(self, dt):
+        p = self.parent
+        if p is None or not isinstance(p, NodeGameMap):
+            return
+        #print("PING")
+        self._delta += dt
+        if self._delta > 1000:
+            self._delta %= 1000
+            if not p.move_forward():
+                r = random.randint(0,1)
+                if r == 0:
+                    p.turn_left()
+                elif r == 1:
+                    p.turn_right()
+
+
 
 
 
