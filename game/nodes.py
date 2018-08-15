@@ -2,17 +2,63 @@
 from . import gbe
 import pygame
 
-class NodeInterface(gbe.nodes.NodeSurface):
-    def __init__(self, name="Interface", parent=None):
+
+class NodeOptions(gbe.nodes.Node2D):
+    def __init__(self, name="Options", parent=None):
         try:
-            gbe.nodes.NodeSurface.__init__(self, name, parent)
+            gbe.nodes.Node2D.__init__(self, name, parent)
         except gbe.nodes.NodeError as e:
             raise e
+        self._options = []
+        self._oindex = 0
+        self._color_select = (255,255,0)
+        self._color_idle = (255,255,255)
 
-    def on_render(self):
-        size = self.resolution
-        self.draw_rect((0, 0, size[0], 10), pygame.Color(255,0,0,128), 1)
-        self.draw_circle((int(size[0]/2), int(size[1]/2)), 16, pygame.Color(255,0,0,255), 2, pygame.Color(0,255,0,255))
+    def add_option(self, font_src, size, text, event, params={}):
+        nodeName = "OpText{}".format(len(self._options))
+        nodeOption = gbe.nodes.NodeText(nodeName, self)
+        nodeOption.font_src = font_src
+        nodeOption.size = size
+        nodeOption.text = text
+        nodeOption.antialias = False
+
+        if len(self._options) == 0:
+            nodeOption.set_color(*self._color_select)
+        else:
+            nodeOption.set_color(*self._color_idle)
+            li = len(self._options)-1
+            lp = self._options[li][0].position
+            ls = self._options[li][0].size
+            nodeOption.position = (lp[0], lp[1] + ls + 1)
+
+        self._options.append([nodeOption, event, params])
+
+    def on_start(self):
+        self.listen("KEYPRESSED", self.on_keypressed)
+
+    def on_pause(self):
+        self.unlisten("KEYPRESSED", self.on_keypressed)
+
+    def on_keypressed(self, event, params):
+        if params["key_name"] == "w":
+            if self._oindex > 0:
+                self._options[self._oindex][0].set_color(*self._color_idle)
+                self._oindex -= 1
+                self._options[self._oindex][0].set_color(*self._color_select)
+
+        elif params["key_name"] == "s":
+            if self._oindex < len(self._options) - 1:
+                self._options[self._oindex][0].set_color(*self._color_idle)
+                self._oindex += 1
+                self._options[self._oindex][0].set_color(*self._color_select)
+
+        elif params["key_name"] in ["enter", "return"]:
+            if len(self._options) > 0:
+                op = self._options[self._oindex]
+                self.emit(op[1], op[2])
+
+        elif params["key_name"] == "escape":
+            self.emit("QUIT")
 
 
 
