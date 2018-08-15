@@ -659,7 +659,7 @@ class NodeText(Node2D):
             res.clear("font", self._NODETEXT_DATA["font_src"])
         Node2D._render(self, surface)
         if self._NODETEXT_DATA["surface"] is not None:
-            pos = self.position
+            pos = self.get_world_position()
             pos = (int(pos[0]), int(pos[1]))
             surface.blit(self._NODETEXT_DATA["surface"], pos)
 
@@ -863,7 +863,7 @@ class NodeSprite(Node2D):
                     fsurf = ssurf
 
                 # Place the sprite! WHEEEEE!
-                pos = self.position
+                pos = self.get_world_position()
                 surface.blit(fsurf, pos)
 
         # Call on all children
