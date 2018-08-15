@@ -23,7 +23,11 @@ _TIME = Time()
 
 class StateMachine:
     def __init__(self):
-        pass
+        Events.listen("SCENECHANGE", self.on_scenechange)
+
+    def on_scenechange(self, event, params):
+        if "scene" in params and "hold" in params:
+            self.activate_node(params["scene"], params["hold"])
 
     def has_node(self, name):
         """
@@ -65,7 +69,7 @@ class StateMachine:
                 _TIME.reset()
 
 
-    def _relaseActive(self, hold_previous):
+    def _releaseActive(self, hold_previous):
         global _ACTIVE_STATE, _HOLD_STATE
         a = _ACTIVE_STATE
         a._pause()
