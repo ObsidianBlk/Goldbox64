@@ -132,6 +132,69 @@ class NodeGameMap(gbe.nodes.Node2D):
     def cell_position(self):
         return (self._cellpos[0], self._cellpos[1])
 
+
+    def load_map(self, src, user=True):
+        rtype = "maps"
+        if user == True:
+            rtype = "user_maps"
+        rm = self.resource
+        m = None
+        try:
+            m = rm.load(rtype, src)
+            m = m.data
+        except Exception as e:
+            print ("Failed to load '{}': {}".format(src, e))
+
+        if "version" not in m:
+            print("Invalid Map Data!")
+            return
+        if m["version"] != "0.0.1":
+            print ("Invalid map version.")
+            return
+        if "count" not in m:
+            print("Invalid Map Data!")
+            return
+        if not isinstance(m["count"], int):
+            print("Invalid Map Data!")
+            return
+        if "layers" not in m:
+            print ("Invalid Map Data!")
+            return
+        if len(m["layers"]) != m["count"]:
+            print ("Map Layer count mismatch!")
+            return
+        if "player" not in m:
+            print ("Invalid Map Data!")
+            return
+        # OK... these are weak tests, but we'll just accept it from here!
+        self._layer = m["layers"]
+        self._currentLayer = m["player"]["layer_name"]
+        self._cellpos = m["player"]["pos"]
+        self._orientation = m["player"]["orientation"]
+
+        print("Map '{}' loaded!".format(src))
+
+
+    def save_map(self, dst):
+        rm = self.resource
+        m = {
+            "version":"0.0.1",
+            "count":self.layer_count,
+            "layers":self._layer,
+            "player":{
+                "layer_name":self._currentLayer,
+                "pos":(self._cellpos[0], self._cellpos[1]),
+                "orientation":self._orientation
+            }
+        }
+        try:
+            rm.save("user_maps", dst, m)
+        except Exception as e:
+            print("Failed to save '{}': {}".format(dst, e))
+            return
+        print ("Map '{}' saved.".format(dst))
+
+
     def set_resources(self, env_src, wall_src):
         res = self.resource
         if env_src != "" and env_src != self._res["env_src"]:
@@ -672,7 +735,17 @@ class NodeMapEditor(gbe.nodes.Node2D):
         self._thickness = 1
         self._color = pygame.Color(255,255,255)
         self._points = None
+        self._filename = None
+        self._fileiomode = 0 # 0 = Save | 1 = Load
         self.pointer_size = 4
+
+        self._fnnode = gbe.nodes.NodeText("FileText", self)
+        self._fnnode.size = 4
+        self._fnnode.font_src = "IttyBitty.ttf"
+        self._fnnode.antialias = False
+        self._fnnode.set_color(255,255,255)
+        self._fnnode.set_background(0,0,0,128)
+        self._fnnode.visible = False
 
     def _getPoints(self, size):
         p = self.parent
@@ -734,26 +807,50 @@ class NodeMapEditor(gbe.nodes.Node2D):
             return
 
         if data["key_name"] == "escape":
-            self.emit("SCENECHANGE", {"scene":"MAIN_MENU", "hold":False})
-            #self.emit("QUIT")
-        if data["key_name"] == "tab":
-            p.toggle_render_mode()
-        elif data["key_name"] == "w":
-            p.move_forward(True)
-        elif data["key_name"] == "s":
-            p.move_backward(True)
-        elif data["key_name"] == "a":
-            p.turn_left()
-        elif data["key_name"] == "d":
-            p.turn_right()
-        elif data["key_name"] == "space":
-            o = p.orientation
-            cpos = p.cell_position
-            p.set_cell_face(cpos[0], cpos[1], o)
-        elif data["key_name"] == "e":
-            p.next_wall()
-        elif data["key_name"] == "q":
-            p.prev_wall()
+            if self._filename is None:
+                self.emit("SCENECHANGE", {"scene":"MAIN_MENU", "hold":False})
+            else:
+                self._filename = None
+                self._fnnode.visible = False
+        elif data["key_name"] in ["enter", "return"] and self._filename is not None:
+            if len(self._filename) > 0:
+                if self._fileiomode == 0:
+                    p.save_map(self._filename)
+                else:
+                    p.load_map(self._filename)
+                # Call SAVE on the game map.
+            self._filename = None
+            self._fnnode.visible = False
+
+        if self._filename is None:
+            if data["key_name"] == "tab":
+                p.toggle_render_mode()
+            elif data["key_name"] == "w":
+                p.move_forward(True)
+            elif data["key_name"] == "s":
+                p.move_backward(True)
+            elif data["key_name"] == "a":
+                p.turn_left()
+            elif data["key_name"] == "d":
+                p.turn_right()
+            elif data["key_name"] == "space":
+                o = p.orientation
+                cpos = p.cell_position
+                p.set_cell_face(cpos[0], cpos[1], o)
+            elif data["key_name"] == "e":
+                p.next_wall()
+            elif data["key_name"] == "q":
+                p.prev_wall()
+            elif data["key_name"] in ["o", "l"]:
+                self._fileiomode = 0
+                if data["key_name"] == "l":
+                    self._fileiomode = 1
+                self._filename = ""
+                self._fnnode.text = ""
+                self._fnnode.visible = True
+        elif len(data["key_name"]) == 1:
+            self._filename = "{}{}".format(self._filename, data["key_name"])
+            self._fnnode.text = self._filename
 
     def on_render(self):
         size = self.resolution
